@@ -1294,11 +1294,13 @@ def load(name,
          sources: Union[str, list[str]],
          extra_cflags=None,
          extra_cuda_cflags=None,
+         extra_sycl_cflags=None,
          extra_ldflags=None,
          extra_include_paths=None,
          build_directory=None,
          verbose=False,
          with_cuda: Optional[bool] = None,
+         with_sycl: Optional[bool] = None,
          is_python_module=True,
          is_standalone=False,
          keep_intermediates=True):
@@ -1337,6 +1339,13 @@ def load(name,
     work fine. If not, setting the ``CUDA_HOME`` environment variable is the
     safest option.
 
+    SYCL support with mixed compilation is provided. Simply pass SYCL source
+    files (``.sycl``) along with other sources. Such files will be detected
+    and compiled with icpx (Intel DPC++ sycl compiler) rather than the C++
+    compiler. You can pass additional flags to icpx via ``extra_sycl_cflags``,
+    just like with ``extra_cflags`` for C++. icpx compiler is expected to
+    be found via system PATH environment variable.
+
     Args:
         name: The name of the extension to build. This MUST be the same as the
             name of the pybind11 module!
@@ -1344,6 +1353,8 @@ def load(name,
         extra_cflags: optional list of compiler flags to forward to the build.
         extra_cuda_cflags: optional list of compiler flags to forward to nvcc
             when building CUDA sources.
+        extra_sycl_cflags: optional list of compiler flags to forward to icpx
+            when building SYCL sources.
         extra_ldflags: optional list of linker flags to forward to the build.
         extra_include_paths: optional list of include directories to forward
             to the build.
@@ -1354,6 +1365,11 @@ def load(name,
             automatically determined based on the existence of ``.cu`` or
             ``.cuh`` in ``sources``. Set it to `True`` to force CUDA headers
             and libraries to be included.
+        with_sycl: Determines whether SYCL headers and libraries are added to
+            the build. If set to ``None`` (default), this value is
+            automatically determined based on the existence of ``.sycl`` in
+            ``sources``. Set it to `True`` to force SYCL headers and
+            libraries to be included.
         is_python_module: If ``True`` (default), imports the produced shared
             library as a Python module. If ``False``, behavior depends on
             ``is_standalone``.
@@ -1387,11 +1403,13 @@ def load(name,
         [sources] if isinstance(sources, str) else sources,
         extra_cflags,
         extra_cuda_cflags,
+        extra_sycl_cflags,
         extra_ldflags,
         extra_include_paths,
         build_directory or _get_build_directory(name, verbose),
         verbose,
         with_cuda,
+        with_sycl,
         is_python_module,
         is_standalone,
         keep_intermediates=keep_intermediates)
@@ -1730,11 +1748,13 @@ def load_inline(name,
         sources,
         extra_cflags,
         extra_cuda_cflags,
+        [],  # extra_sycl_cflags
         extra_ldflags,
         extra_include_paths,
         build_directory,
         verbose,
         with_cuda,
+        False,  # with_sycl
         is_python_module,
         is_standalone=False,
         keep_intermediates=keep_intermediates)
@@ -1744,11 +1764,13 @@ def _jit_compile(name,
                  sources,
                  extra_cflags,
                  extra_cuda_cflags,
+                 extra_sycl_cflags,
                  extra_ldflags,
                  extra_include_paths,
                  build_directory: str,
                  verbose: bool,
                  with_cuda: Optional[bool],
+                 with_sycl: Optional[bool],
                  is_python_module,
                  is_standalone,
                  keep_intermediates=True) -> None:
@@ -1758,6 +1780,8 @@ def _jit_compile(name,
     if with_cuda is None:
         with_cuda = any(map(_is_cuda_file, sources))
     with_cudnn = any('cudnn' in f for f in extra_ldflags or [])
+    if with_sycl is None:
+        with_sycl = any(map(_is_sycl_file, sources))
     old_version = JIT_EXTENSION_VERSIONER.get_version(name)
     version = JIT_EXTENSION_VERSIONER.bump_version_if_changed(
         name,
@@ -1765,6 +1789,7 @@ def _jit_compile(name,
         build_arguments=[extra_cflags, extra_cuda_cflags, extra_ldflags, extra_include_paths],
         build_directory=build_directory,
         with_cuda=with_cuda,
+        with_sycl=with_sycl,
         is_python_module=is_python_module,
         is_standalone=is_standalone,
     )
@@ -1805,11 +1830,13 @@ def _jit_compile(name,
                         sources=sources,
                         extra_cflags=extra_cflags or [],
                         extra_cuda_cflags=extra_cuda_cflags or [],
+                        extra_sycl_cflags=extra_sycl_cflags or [],
                         extra_ldflags=extra_ldflags or [],
                         extra_include_paths=extra_include_paths or [],
                         build_directory=build_directory,
                         verbose=verbose,
                         with_cuda=with_cuda,
+                        with_sycl=with_sycl,
                         is_standalone=is_standalone)
             elif verbose:
                 print('No modifications detected for re-loaded extension '
@@ -1864,11 +1891,15 @@ def _write_ninja_file_and_compile_objects(
         cuda_cflags=cuda_cflags,
         cuda_post_cflags=cuda_post_cflags,
         cuda_dlink_post_cflags=cuda_dlink_post_cflags,
+        sycl_cflags=None,
+        sycl_post_cflags=None,
+        sycl_dlink_post_cflags=None,
         sources=sources,
         objects=objects,
         ldflags=None,
         library_target=None,
-        with_cuda=with_cuda)
+        with_cuda=with_cuda,
+        with_sycl=False)
     if verbose:
         print('Compiling objects...', file=sys.stderr)
     _run_ninja_build(
@@ -1884,11 +1915,13 @@ def _write_ninja_file_and_build_library(
         sources: list[str],
         extra_cflags,
         extra_cuda_cflags,
+        extra_sycl_cflags,
         extra_ldflags,
         extra_include_paths,
         build_directory: str,
         verbose: bool,
         with_cuda: Optional[bool],
+        with_sycl: Optional[bool],
         is_standalone: bool = False) -> None:
     verify_ninja_availability()
 
@@ -1897,6 +1930,8 @@ def _write_ninja_file_and_build_library(
     get_compiler_abi_compatibility_and_version(compiler)
     if with_cuda is None:
         with_cuda = any(map(_is_cuda_file, sources))
+    if with_sycl is None:
+        with_sycl = any(map(_is_sycl_file, sources))
     extra_ldflags = _prepare_ldflags(
         extra_ldflags or [],
         with_cuda,
@@ -1921,9 +1956,11 @@ def _write_ninja_file_and_build_library(
         sources=sources,
         extra_cflags=extra_cflags or [],
         extra_cuda_cflags=extra_cuda_cflags or [],
+        extra_sycl_cflags=extra_sycl_cflags or [],
         extra_ldflags=extra_ldflags or [],
         extra_include_paths=extra_include_paths or [],
         with_cuda=with_cuda,
+        with_sycl=with_sycl,
         is_standalone=is_standalone)
 
     if verbose:
@@ -2262,12 +2299,15 @@ def _write_ninja_file_to_build_library(path,
                                        sources,
                                        extra_cflags,
                                        extra_cuda_cflags,
+                                       extra_sycl_cflags,
                                        extra_ldflags,
                                        extra_include_paths,
                                        with_cuda,
+                                       with_sycl,
                                        is_standalone) -> None:
     extra_cflags = [flag.strip() for flag in extra_cflags]
     extra_cuda_cflags = [flag.strip() for flag in extra_cuda_cflags]
+    extra_sycl_cflags = [flag.strip() for flag in extra_sycl_cflags]
     extra_ldflags = [flag.strip() for flag in extra_ldflags]
     extra_include_paths = [flag.strip() for flag in extra_include_paths]
 
@@ -2335,6 +2375,28 @@ def _write_ninja_file_to_build_library(path,
     else:
         cuda_flags = None
 
+    if with_sycl:
+        sycl_common_cflags = ['-fsycl', '-fsycl-targets=spir64_gen,spir64']
+        sycl_cflags = cflags + sycl_common_cflags
+        sycl_cflags += extra_sycl_cflags
+        # "preview breaking changes" flags allows to support both C++ ABIs
+        sycl_cflags += ['-fpreview-breaking-changes', '-D__INTEL_PREVIEW_BREAKING_CHANGES']
+        if not any(flag.startswith('-sycl-std=') for flag in sycl_cflags):
+            sycl_cflags.append('-sycl-std=2020')
+        host_cxx = get_cxx_compiler()
+        host_cflags = cflags
+        # escaping quoted arguments to pass them thru icpx
+        host_cflags = [item.replace('\\"', '\\\\"') for item in host_cflags]
+        host_cflags = ' '.join(host_cflags)
+        # note that -fsycl-host-compiler-options will be quoted as needed
+        # with shlex.quote below
+        sycl_cflags += [f'-fsycl-host-compiler={host_cxx}', shlex.quote(f'-fsycl-host-compiler-options={host_cflags}')]
+        sycl_arch_list = os.environ.get('TORCH_XPU_ARCH_LIST', 'pvc,xe-lpg')
+        sycl_dlink_post_cflags = sycl_common_cflags + ['-fsycl-link', f'-Xs "-device {sycl_arch_list}"']
+    else:
+        sycl_cflags = None
+        sycl_dlink_post_cflags = None
+
     def object_file_path(source_file: str) -> str:
         # '/path/to/file.cpp' -> 'file'
         file_name = os.path.splitext(os.path.basename(source_file))[0]
@@ -2342,6 +2404,8 @@ def _write_ninja_file_to_build_library(path,
             # Use a different object filename in case a C++ and CUDA file have
             # the same filename but different extension (.cpp vs. .cu).
             target = f'{file_name}.cuda.o'
+        elif _is_sycl_file(source_file) and with_sycl:
+            target = f'{file_name}.sycl.o'
         else:
             target = f'{file_name}.o'
         return target
@@ -2365,11 +2429,15 @@ def _write_ninja_file_to_build_library(path,
         cuda_cflags=cuda_flags,
         cuda_post_cflags=None,
         cuda_dlink_post_cflags=None,
+        sycl_cflags=sycl_cflags,
+        sycl_post_cflags=[],
+        sycl_dlink_post_cflags=sycl_dlink_post_cflags,
         sources=sources,
         objects=objects,
         ldflags=ldflags,
         library_target=library_target,
-        with_cuda=with_cuda)
+        with_cuda=with_cuda,
+        with_sycl=with_sycl)
 
 
 def _write_ninja_file(path,
@@ -2378,18 +2446,27 @@ def _write_ninja_file(path,
                       cuda_cflags,
                       cuda_post_cflags,
                       cuda_dlink_post_cflags,
+                      sycl_cflags,
+                      sycl_post_cflags,
+                      sycl_dlink_post_cflags,
                       sources,
                       objects,
                       ldflags,
                       library_target,
-                      with_cuda) -> None:
+                      with_cuda,
+                      with_sycl) -> None:
     r"""Write a ninja file that does the desired compiling and linking.
 
     `path`: Where to write this file
     `cflags`: list of flags to pass to $cxx. Can be None.
     `post_cflags`: list of flags to append to the $cxx invocation. Can be None.
     `cuda_cflags`: list of flags to pass to $nvcc. Can be None.
-    `cuda_postflags`: list of flags to append to the $nvcc invocation. Can be None.
+    `cuda_post_cflags`: list of flags to append to the $nvcc invocation. Can be None.
+    `cuda_dlink_post_cflags`: list of flags to append to the $nvcc device code link invocation. Can be None.
+    `sycl_cflags`: list of flags to pass to $icpx. Can be None.
+    `sycl_post_cflags`: list of flags to append to the $icpx invocation. Can be None.
+    `sycl_dlink_post_cflags`: list of flags to append to the $nvcc device code link invocation. Can be Non
+e.
     `sources`: list of paths to source files
     `objects`: list of desired paths to objects, one per source.
     `ldflags`: list of flags to pass to linker. Can be None.
@@ -2408,6 +2485,9 @@ def _write_ninja_file(path,
     cuda_cflags = sanitize_flags(cuda_cflags)
     cuda_post_cflags = sanitize_flags(cuda_post_cflags)
     cuda_dlink_post_cflags = sanitize_flags(cuda_dlink_post_cflags)
+    sycl_cflags = sanitize_flags(sycl_cflags)
+    sycl_post_cflags = sanitize_flags(sycl_post_cflags)
+    sycl_dlink_post_cflags = sanitize_flags(sycl_dlink_post_cflags)
     ldflags = sanitize_flags(ldflags)
 
     # Sanity checks...
@@ -2428,6 +2508,9 @@ def _write_ninja_file(path,
             else:
                 nvcc = _join_cuda_home('bin', 'nvcc')
         config.append(f'nvcc = {nvcc}')
+    if with_sycl or sycl_dlink_post_cflags:
+        sycl = 'icx' if IS_WINDOWS else 'icpx'
+        config.append(f'sycl = {sycl}')
 
     if IS_HIP_EXTENSION:
         post_cflags = COMMON_HIP_FLAGS + post_cflags
@@ -2437,6 +2520,10 @@ def _write_ninja_file(path,
         flags.append(f'cuda_cflags = {" ".join(cuda_cflags)}')
         flags.append(f'cuda_post_cflags = {" ".join(cuda_post_cflags)}')
     flags.append(f'cuda_dlink_post_cflags = {" ".join(cuda_dlink_post_cflags)}')
+    if with_sycl:
+        flags.append(f'sycl_cflags = {" ".join(sycl_cflags)}')
+        flags.append(f'sycl_post_cflags = {" ".join(sycl_post_cflags)}')
+    flags.append(f'sycl_dlink_post_cflags = {" ".join(sycl_dlink_post_cflags)}')
     flags.append(f'ldflags = {" ".join(ldflags)}')
 
     # Turn into absolute paths so we can emit them into the ninja build
@@ -2470,11 +2557,25 @@ def _write_ninja_file(path,
         cuda_compile_rule.append(
             f'  command = $nvcc {nvcc_gendeps} $cuda_cflags -c $in -o $out $cuda_post_cflags')
 
+    if with_sycl:
+        sycl_compile_rule = ['rule sycl_compile']
+        # icpx compiler does not recognize .sycl extension automatically,
+        # so we pass '-x c++' explicitly notifying compiler of file format
+        sycl_compile_rule.append(
+            '  command = $sycl $sycl_cflags -c -x c++ $in -o $out $sycl_post_cflags')
+
+
     # Emit one build rule per source to enable incremental build.
     build = []
     for source_file, object_file in zip(sources, objects):
         is_cuda_source = _is_cuda_file(source_file) and with_cuda
-        rule = 'cuda_compile' if is_cuda_source else 'compile'
+        is_sycl_source = _is_sycl_file(source_file) and with_sycl
+        if is_cuda_source:
+            rule = 'cuda_compile'
+        elif is_sycl_source:
+            rule = 'sycl_compile'
+        else:
+            rule = 'compile'
         if IS_WINDOWS:
             source_file = source_file.replace(':', '$:')
             object_file = object_file.replace(':', '$:')
@@ -2483,13 +2584,22 @@ def _write_ninja_file(path,
         build.append(f'build {object_file}: {rule} {source_file}')
 
     if cuda_dlink_post_cflags:
-        devlink_out = os.path.join(os.path.dirname(objects[0]), 'dlink.o')
-        devlink_rule = ['rule cuda_devlink']
-        devlink_rule.append('  command = $nvcc $in -o $out $cuda_dlink_post_cflags')
-        devlink = [f'build {devlink_out}: cuda_devlink {" ".join(objects)}']
-        objects += [devlink_out]
+        cuda_devlink_out = os.path.join(os.path.dirname(objects[0]), 'dlink.o')
+        cuda_devlink_rule = ['rule cuda_devlink']
+        cuda_devlink_rule.append('  command = $nvcc $in -o $out $cuda_dlink_post_cflags')
+        cuda_devlink = [f'build {cuda_devlink_out}: cuda_devlink {" ".join(objects)}']
+        objects += [cuda_devlink_out]
     else:
-        devlink_rule, devlink = [], []
+        cuda_devlink_rule, cuda_devlink = [], []
+
+    if sycl_dlink_post_cflags:
+        sycl_devlink_out = os.path.join(os.path.dirname(objects[0]), 'sycl_dlink.o')
+        sycl_devlink_rule = ['rule sycl_devlink']
+        sycl_devlink_rule.append('  command = $sycl $in -o $out $sycl_dlink_post_cflags')
+        sycl_devlink = [f'build {sycl_devlink_out}: sycl_devlink {" ".join(objects)}']
+        objects += [sycl_devlink_out]
+    else:
+        sycl_devlink_rule, sycl_devlink = [], []
 
     if library_target is not None:
         link_rule = ['rule link']
@@ -2514,7 +2624,9 @@ def _write_ninja_file(path,
     blocks = [config, flags, compile_rule]
     if with_cuda:
         blocks.append(cuda_compile_rule)  # type: ignore[possibly-undefined]
-    blocks += [devlink_rule, link_rule, build, devlink, link, default]
+    if with_sycl:
+        blocks.append(sycl_compile_rule)  # type: ignore[possibly-undefined]
+    blocks += [cuda_devlink_rule, sycl_devlink_rule, link_rule, build, cuda_devlink, sycl_devlink, link, default]
     content = "\n\n".join("\n".join(b) for b in blocks)
     # Ninja requires a new lines at the end of the .ninja file
     content += "\n"
@@ -2537,4 +2649,8 @@ def _is_cuda_file(path: str) -> bool:
     valid_ext = ['.cu', '.cuh']
     if IS_HIP_EXTENSION:
         valid_ext.append('.hip')
+    return os.path.splitext(path)[1] in valid_ext
+
+def _is_sycl_file(path: str) -> bool:
+    valid_ext = ['.sycl']
     return os.path.splitext(path)[1] in valid_ext

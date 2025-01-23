@@ -9,8 +9,8 @@
 #include <ATen/Functions.h>
 #include <ATen/NativeFunctions.h>
 #else
-#include <ATen/ops/_upsample_bilinear2d_aa_native.h>
 #include <ATen/ops/_upsample_bilinear2d_aa_backward_native.h>
+#include <ATen/ops/_upsample_bilinear2d_aa_native.h>
 #include <ATen/ops/_upsample_nearest_exact1d.h>
 #include <ATen/ops/_upsample_nearest_exact1d_backward.h>
 #include <ATen/ops/_upsample_nearest_exact1d_backward_native.h>
@@ -265,7 +265,8 @@ static void upsample_kernel_out_template(const Tensor& input,
   std::array<float, 2> scales = {
       area_pixel_compute_scale<float>(input.size(3), output.size(3), align_corners, scale_w_opt),
       area_pixel_compute_scale<float>(input.size(2), output.size(2), align_corners, scale_h_opt)};
-  auto upsamplePSO = lib.getPipelineStateForFunc(fmt::format("upsample_{}_{}",  name, mps::scalarToMetalTypeString(input)));
+  auto upsamplePSO =
+      lib.getPipelineStateForFunc(fmt::format("upsample_{}_{}", name, mps::scalarToMetalTypeString(input)));
   auto stream = getCurrentMPSStream();
   dispatch_sync_with_rethrow(stream->queue(), ^() {
     @autoreleasepool {
@@ -304,8 +305,8 @@ static void upsample_kernel_backward_out_template(const Tensor& grad_input,
   std::array<float, 2> scales = {
       area_pixel_compute_scale<float>(grad_input.size(3), grad_output.size(3), align_corners, scale_w_opt),
       area_pixel_compute_scale<float>(grad_input.size(2), grad_output.size(2), align_corners, scale_h_opt)};
-  auto upsamplePSO =
-      lib.getPipelineStateForFunc(fmt::format("upsample_{}_backward_{}", name , mps::scalarToMetalTypeString(grad_input)));
+  auto upsamplePSO = lib.getPipelineStateForFunc(
+      fmt::format("upsample_{}_backward_{}", name, mps::scalarToMetalTypeString(grad_input)));
   auto stream = getCurrentMPSStream();
   dispatch_sync_with_rethrow(stream->queue(), ^() {
     @autoreleasepool {

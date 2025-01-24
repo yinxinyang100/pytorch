@@ -43,14 +43,10 @@ from ..utils import (
 from .mm_common import (
     _is_static_problem,
     addmm_epilogue,
-    extra_mm_configs,
-    int8_mm_configs,
-    mixed_mm_configs,
     mm_args,
-    mm_configs,
+    mm_config_kwargs,
     mm_grid,
     mm_options,
-    persistent_mm_configs,
     persistent_mm_grid,
     persistent_mm_options,
     triton_config,
@@ -268,15 +264,6 @@ def _is_large_block_for_cpu(m, n, k):
     return m * n > 2**13
 
 
-def mm_config_kwargs(device):
-    if device == "cpu":
-        return {
-            "scale": 0.5,
-            "exclude": _is_large_block_for_cpu,
-        }
-    return {}
-
-
 def bias_addmm(inp, mat1, mat2, *, out=None, alpha=1, beta=1):
     """
     Giving torch.addmm a 1D tensor calls a different (faster) cublasLt
@@ -307,6 +294,11 @@ def tuned_mm(mat1, mat2, *, layout=None):
         [aten_mm.bind((mat1, mat2), aten_layout)] if use_aten_gemm_kernels() else []
     )
     static_shape, is_nonzero = _is_static_problem(layout)
+
+    mm_configs = V.choices.get_base_mm_configs()
+    persistent_mm_configs = V.choices.get_persistent_mm_configs()
+    extra_mm_configs = V.choices.get_extra_mm_configs()
+
     if is_nonzero and use_triton_template(layout):
         for config in mm_configs(m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))):
             mm_template.maybe_append_choice(
@@ -431,6 +423,9 @@ def tuned_int_mm(mat1, mat2, *, layout=None):
         CUTLASS3xGemmTemplate.add_cutlass_gemm_choices(
             choices, layout, [mat1, mat2], fuseable=True, non_fuseable=True
         )
+
+    int8_mm_configs = V.choices.get_int8_mm_configs()
+
     if is_nonzero and use_triton_template(layout, enable_int32=True):
         for config in int8_mm_configs(
             m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))
@@ -511,6 +506,9 @@ def tuned_addmm(inp, mat1, mat2, *, alpha=1, beta=1, layout=None):
                 (inp_expanded, mat1, mat2), layout, alpha=alpha, beta=beta
             ),
         )
+
+    mm_configs = V.choices.get_base_mm_configs()
+    persistent_mm_configs = V.choices.get_persistent_mm_configs()
 
     if is_nonzero and use_triton_template(layout):
         for config in mm_configs(m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))):
@@ -867,6 +865,9 @@ def tuned_mixed_mm(mat1, mat2, mat2_dtype):
             choices.append(fallback)
 
         has_int8_tensor = _is_int8_mat(mat1) or _is_int8_mat(mat2)
+
+        mixed_mm_configs = V.choices.get_mixed_mm_configs()
+
         for config in mixed_mm_configs(
             m,
             n,
@@ -934,6 +935,7 @@ def tuned_fused_int_mm_mul(mat1, mat2, mat3, out_dtype, *, layout=None):
         return V.ops.mul(v1, v2)
 
     choices: list[dict[Any, Any]] = []
+    int8_mm_configs = V.choices.get_int8_mm_configs()
     for config in int8_mm_configs(
         m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))
     ):

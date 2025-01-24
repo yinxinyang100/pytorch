@@ -194,6 +194,10 @@ kernel void upsample_bilinear2d(
   }
 }
 
+inline float bilinear_functor(float x) {
+  return abs(x) < 1.0 ? 1.0 - abs(x) : abs(x);
+}
+
 template <typename T>
 kernel void upsample_bilinear2d_aa(
     constant T* inputData [[buffer(0)]],
@@ -208,15 +212,18 @@ kernel void upsample_bilinear2d_aa(
   auto output_x = thread_index % output_sizes.x;
   auto output_y = thread_index / output_sizes.x;
   auto x_center = area_pixel_compute_source_index(
-                      scales.x, output_x, align_corners, /*cubic=*/false) +
+                      scales.x, output_x, align_corners, /*cubic=*/true) +
       .5;
   auto y_center = area_pixel_compute_source_index(
-                      scales.y, output_y, align_corners, /*cubic=*/false) +
+                      scales.y, output_y, align_corners, /*cubic=*/true) +
       .5;
-  auto x_min = max(0L, long(floor(x_center - scales.x + .5)));
-  auto x_max = min(input_sizes.x, long(floor(x_center + scales.x + .5)));
-  auto y_min = max(0L, long(floor(y_center - scales.y + .5)));
-  auto y_max = min(input_sizes.y, long(floor(y_center + scales.y + .5)));
+  auto clamped_scales = max(1.0, scales);
+  auto x_min = max(0L, long(floor(x_center - clamped_scales.x + .5)));
+  auto x_max =
+      min(input_sizes.x, long(floor(x_center + clamped_scales.x + .5)));
+  auto y_min = max(0L, long(floor(y_center - clamped_scales.y + .5)));
+  auto y_max =
+      min(input_sizes.y, long(floor(y_center + clamped_scales.y + .5)));
   for (int n = 0; n < output_sizes.w; n++) {
     for (int c = 0; c < output_sizes.z; c++) {
       float res = 0.0;
@@ -224,11 +231,9 @@ kernel void upsample_bilinear2d_aa(
       constant auto* input =
           inputData + n * input_strides.w + c * input_strides.z;
       for (auto y = y_min; y < y_max; ++y) {
-        auto dy = abs(y - y_center + 0.5) / scales.y;
-        dy = dy < 1.0 ? 1.0 - dy : dy;
+        auto dy = bilinear_functor((y - y_center + 0.5) / clamped_scales.y);
         for (auto x = x_min; x < x_max; ++x) {
-          auto dx = abs(x - x_center + 0.5) / scales.x;
-          dx = dx < 1.0 ? 1.0 - dx : dx;
+          auto dx = bilinear_functor((x - x_center + 0.5) / clamped_scales.x);
           auto val = input[x * input_strides.x + y * input_strides.y];
           res += val * dx * dy;
           ws += dx * dy;

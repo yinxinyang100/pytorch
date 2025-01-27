@@ -86,7 +86,7 @@ class InductorChoices:
         mm_heuristics = self.get_config_heuristics()
         mm_kernel_configs = mm_heuristics.get_mm_configs()
         mixed_mm_kernel_configs_small_m = mm_heuristics.get_mixed_mm_configs()
-        filtered_configs = self._filter_configs(
+        return (
             mm_kernel_configs + mixed_mm_kernel_configs_small_m
             if config.max_autotune_gemm_search_space != "EXHAUSTIVE"
             else mm_kernel_configs

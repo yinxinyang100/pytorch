@@ -395,6 +395,31 @@ class BaseConfigHeuristic:
         filtered_configs = self._filter_configs(self.conv_configs)
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
+    def generate_mixed_mm_config(m, n, k):
+        if m <= 16 and n >= 4096 and k >= 4096:
+            return self.triton_config(
+                BLOCK_M=16,
+                BLOCK_N=64,
+                BLOCK_K=128,
+                num_stages=5,
+                num_warps=4,
+            )
+        elif m > 16 and m <= 32 and n >= 4096 and k >= 4096:
+            return self.triton_config(
+                BLOCK_M=32,
+                BLOCK_N=32,
+                BLOCK_K=128,
+                num_stages=5,
+                num_warps=4,
+            )
+        elif m > 32 and m <= 64 and n >= 4096 and k >= 4096:
+            return self.triton_config(
+                BLOCK_M=64,
+                BLOCK_N=32,
+                BLOCK_K=128,
+                num_stages=5,
+                num_warps=4,
+            )
 
 
 class CUDAConfigHeuristic(BaseConfigHeuristic):
@@ -534,6 +559,31 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
+    def generate_mixed_mm_config(m, n, k):
+        if m <= 16 and n >= 4096 and k >= 4096:
+            return self.triton_config(
+                BLOCK_M=16,
+                BLOCK_N=64,
+                BLOCK_K=128,
+                num_stages=2,
+                num_warps=4,
+            )
+        elif m > 16 and m <= 32 and n >= 4096 and k >= 4096:
+            return self.triton_config(
+                BLOCK_M=32,
+                BLOCK_N=32,
+                BLOCK_K=128,
+                num_stages=2,
+                num_warps=4,
+            )
+        elif m > 32 and m <= 64 and n >= 4096 and k >= 4096:
+            return self.triton_config(
+                BLOCK_M=64,
+                BLOCK_N=32,
+                BLOCK_K=128,
+                num_stages=2,
+                num_warps=4,
+            )
 
 class XPUConfigHeuristic(BaseConfigHeuristic):
     pass

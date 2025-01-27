@@ -84,10 +84,13 @@ class InductorChoices:
 
     def get_mixed_mm_configs(self):
         mm_heuristics = self.get_config_heuristics()
-        if config.max_autotune_gemm_search_space != "EXHAUSTIVE":
-            return mm_heuristics.get_mm_configs()
-        else:
-            return mm_heuristics.get_mixed_mm_configs()
+        mm_kernel_configs = mm_heuristics.get_mm_configs()
+        mixed_mm_kernel_configs_small_m = mm_heuristics.get_mixed_mm_configs()
+        filtered_configs = self._filter_configs(
+            mm_kernel_configs + mixed_mm_kernel_configs_small_m
+            if config.max_autotune_gemm_search_space != "EXHAUSTIVE"
+            else mm_kernel_configs
+        )
 
     def get_persistent_mm_configs(self):
         mm_heuristics = self.get_config_heuristics()

@@ -372,7 +372,7 @@ class BaseConfigHeuristic:
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_mixed_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.mm_kernel_configs + self.mixed_mm_configs)
+        filtered_configs = self._filter_configs(self.mixed_mm_configs)
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_persistent_mm_configs(self) -> List[Dict[str, Any]]:
@@ -448,11 +448,13 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
         ]
 
     def _filter_configs(self, configs, num_stages):
-        return tuple(
+        configs = tuple(
             cast(tuple[int, int, int, int, int], config["config"])
             for config in configs
             if config["cond"]
         )
+        
+        return tuple((c[0], c[1], c[2], num_stages, c[4]) for c in configs)
 
     def _finalize_mm_configs(
         self,

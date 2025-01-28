@@ -565,7 +565,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
 
     def get_conv_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-            self.conv_configs, num_stages=default_num_stages
+            self.conv_configs, num_stages=self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 

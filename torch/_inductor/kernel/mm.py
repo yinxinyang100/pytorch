@@ -825,14 +825,15 @@ def tuned_mixed_mm(mat1, mat2, mat2_dtype):
         choices = []
 
     if not skip_triton:
-
         mm_heuristic = V.choices.get_config_heuristics()
-        mixed_mm_configs = mm_heuristic.get_mixed_mm_configs()
+        mixed_mm_configs = V.choices.get_mixed_mm_configs()
 
         b_prologue_cast_type = f"tl.{mat2_dtype}".replace("torch.", "")
         if static_shape and inductor_config.mixed_mm_choice == "heuristic":
             choices = []
-            config = try_heuristic(m, n, k, choices, mat1, mat2, mat2_dtype, layout, mm_heuristic)
+            config = try_heuristic(
+                m, n, k, choices, mat1, mat2, mat2_dtype, layout, mm_heuristic
+            )
             if config is not None:
                 mm_template.maybe_append_choice(
                     choices,
@@ -851,6 +852,7 @@ def tuned_mixed_mm(mat1, mat2, mat2_dtype):
             has_int8_tensor=has_int8_tensor,
             **mm_config_kwargs(ir.get_device_type(mat1)),
         ):
+            print(choices)
             mm_template.maybe_append_choice(
                 choices,
                 input_nodes=(mat1, mat2),

@@ -14,7 +14,7 @@ class BaseConfigHeuristic:
     """
     Base class for mm_configs, device specific triton kernels config inherit from here
     """
-    
+
     def __init__(self):
         # List of dictionaries to store the kernel configs. Configs that evaluate to true
         # will be utilised on the target platform. The configs are as follows:
@@ -372,7 +372,12 @@ class BaseConfigHeuristic:
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_mixed_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.mixed_mm_configs)
+        mm_configs = (
+            self.mm_configs + self.mixed_mm_configs
+            if config.max_autotune_gemm_search_space == "EXHAUSTIVE"
+            else self.mm_configs
+        )
+        filtered_configs = self._filter_configs(mm_configs)
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_persistent_mm_configs(self) -> List[Dict[str, Any]]:
@@ -433,6 +438,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
 
     def __init__(self):
         from .utils import get_backend_num_stages
+
         super().__init__()
 
         self.default_num_stages = get_backend_num_stages()
@@ -453,7 +459,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
             for config in configs
             if config["cond"]
         )
-        
+
         return tuple((c[0], c[1], c[2], num_stages, c[4]) for c in configs)
 
     def _finalize_mm_configs(
@@ -504,7 +510,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
 
     def get_mm_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-                self.mm_configs, self.default_num_stages
+            self.mm_configs, self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
@@ -527,9 +533,12 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_mixed_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(
-            self.mixed_mm_configs, num_stages=self.default_num_stages
+        mm_configs = (
+            self.mm_configs + self.mixed_mm_configs
+            if config.max_autotune_gemm_search_space == "EXHAUSTIVE"
+            else self.mm_configs
         )
+        filtered_configs = self._filter_configs(mm_configs, self.default_num_stages)
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_persistent_mm_configs(self) -> List[Dict[str, Any]]:
@@ -554,10 +563,9 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
         filtered_configs = self._filter_configs(self.mm_plus_mm_configs, num_stages=1)
         return partial(self.preprocess_mm_plus_mm_configs, configs=filtered_configs)
 
-
     def get_conv_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-                self.conv_configs, num_stages=2
+            self.conv_configs, num_stages=default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
@@ -586,6 +594,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
                 num_stages=2,
                 num_warps=4,
             )
+
 
 class XPUConfigHeuristic(BaseConfigHeuristic):
     pass

@@ -23,6 +23,7 @@ from .virtualized import V
 
 if TYPE_CHECKING:
     from torch.utils._ordered_set import OrderedSet
+
     from .codegen.simd_kernel_features import SIMDKernelFeatures
     from .codegen.triton import TritonKernel
 
@@ -84,13 +85,7 @@ class InductorChoices:
 
     def get_mixed_mm_configs(self):
         mm_heuristics = self.get_config_heuristics()
-        mm_kernel_configs = mm_heuristics.get_mm_configs()
-        mixed_mm_kernel_configs_small_m = mm_heuristics.get_mixed_mm_configs()
-        return (
-            mm_kernel_configs + mixed_mm_kernel_configs_small_m
-            if config.max_autotune_gemm_search_space != "EXHAUSTIVE"
-            else mm_kernel_configs
-        )
+        return mm_heuristics.get_mixed_mm_configs()
 
     def get_persistent_mm_configs(self):
         mm_heuristics = self.get_config_heuristics()

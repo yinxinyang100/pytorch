@@ -48,24 +48,20 @@ class InductorChoices:
             torch._inductor.virtualized.V.set_choices_handler(MyHeuristics())
     """
 
-    def get_config_heuristics(self, device_type="cuda"):
-        from torch._inductor import config
+    def get_config_heuristics(self):
         from torch._inductor.utils import get_gpu_type
 
         device_type = get_gpu_type()
 
-        if config.max_autotune_custom_heuristic is None:
-            if device_type == "cuda":
-                if torch.version.hip is None:
-                    return CUDAConfigHeuristic()
-                else:
-                    return ROCmConfigHeuristic()
-            elif device_type == "xpu":
-                return XPUConfigHeuristic()
+        if device_type == "cuda":
+            if torch.version.hip is None:
+                return CUDAConfigHeuristic()
             else:
-                return BaseConfigHeuristic()
+                return ROCmConfigHeuristic()
+        elif device_type == "xpu":
+            return XPUConfigHeuristic()
         else:
-            return torch._inductor.max_autotune_custom_heuristic
+            return BaseConfigHeuristic()
 
     # GEMM configs
     def get_base_mm_configs(self):

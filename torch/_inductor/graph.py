@@ -1,6 +1,7 @@
 import contextlib
 import functools
 import itertools
+import json
 import logging
 import operator
 import os
@@ -23,7 +24,10 @@ from torch import device, Tensor
 from torch._decomp import get_decompositions
 from torch._dynamo.utils import defake, dynamo_timed
 from torch._logging import LazyString, trace_structured
-from torch._prims_common import make_channels_last_strides_for
+from torch._prims_common import (
+    compute_required_storage_length,
+    make_channels_last_strides_for,
+)
 from torch._subclasses.fake_tensor import FakeTensor
 from torch.fx import GraphModule
 from torch.fx.experimental._backward_state import BackwardState
@@ -51,6 +55,7 @@ from .codegen.common import (
     get_device_op_overrides,
     get_wrapper_codegen_for_device,
     init_backend_registration,
+    WorkspaceArg,
 )
 from .codegen.wrapper import PythonWrapperCodegen
 from .exc import (
@@ -383,6 +388,11 @@ class GraphLowering(torch.fx.Interpreter):
             const_module.device_idxs if const_module else OrderedSet()
         )
         self.device_type = "cpu"
+
+        # Inplace padding may require Inductor to allocate slightly larger
+        # tensor for padding.
+        self.buffer_to_padded_size: dict[str, list[int]] = {}
+
         self.buffers: list[ir.Buffer] = []
         self.operations: list[ir.Operation] = []
         self.const_output_index: dict[str, int] = (
@@ -486,6 +496,28 @@ class GraphLowering(torch.fx.Interpreter):
         self.placeholder_idx = -1
 
         self.bw_donated_idxs = get_donated_idxs()
+
+    def get_allocation_size(
+        self, node: Union[ir.TensorBox, ir.StorageBox, ir.Buffer, WorkspaceArg]
+    ) -> Sequence[Expr]:
+        if isinstance(node, ir.TensorBox):
+            node = node.data  # type: ignore[assignment]
+        if isinstance(node, ir.StorageBox):
+            node = node.data  # type: ignore[assignment]
+        if (
+            isinstance(node, ir.ComputedBuffer)
+            and node.name in self.buffer_to_padded_size
+        ):
+            return self.buffer_to_padded_size[node.name]
+        else:
+            return node.get_size()
+
+    def get_allocation_storage_size(self, node: Union[ir.Buffer, WorkspaceArg]) -> Expr:
+        layout = node.get_layout()
+        size = self.get_allocation_size(node)  # consider inplace padding
+        stride = layout.stride
+        offset = layout.offset
+        return compute_required_storage_length(size, stride, offset)  # type: ignore[arg-type]
 
     def has_feature(
         self,
@@ -1906,9 +1938,16 @@ class GraphLowering(torch.fx.Interpreter):
                 "Finished codegen for all nodes. The list of kernel names available: %s",
                 V.graph.all_codegen_kernel_names,
             )
-
             # Dump the inductor_triton_kernel_to_post_grad_node_info to a json file for debugging trace
-            V.debug.log_inductor_triton_kernel_to_post_grad_node_info()
+            debug_info = V.debug.log_inductor_triton_kernel_to_post_grad_node_info()
+            trace_structured(
+                "artifact",
+                metadata_fn=lambda: {
+                    "name": "inductor_triton_kernel_to_post_grad_nodes",
+                    "encoding": "json",
+                },
+                payload_fn=lambda: json.dumps(debug_info),
+            )
 
             result = self.wrapper_code.generate(self.is_inference)
             self.wrapper_code.pop_codegened_graph()
@@ -2013,7 +2052,7 @@ class GraphLowering(torch.fx.Interpreter):
         self.cache_path = path
         self.cache_linemap = linemap  # type: ignore[assignment]
 
-        if config.profile_bandwidth_output:
+        if config.benchmark_harness and config.profile_bandwidth_output:
             # run the inputs code gen to get the bandwidth info
             mod.benchmark_compiled_module(times=1, repeat=1)
         # Logged twice as per https://github.com/pytorch/pytorch/pull/99038#discussion_r1167826029

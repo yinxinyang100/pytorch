@@ -12,8 +12,6 @@ from .virtualized import V
 
 from .utils import get_backend_num_stages
 
-default_num_stages = get_backend_num_stages()
-
 class BaseConfigSingleton(type):
     """
     Thread-safe implementation of single to be used in the config heuristic subclasses
@@ -22,8 +20,6 @@ class BaseConfigSingleton(type):
 
     _instances = {}
     _lock: Lock = Lock()
-
-    print("create")
 
     def __call__(cls, *args, **kwargs):
         with cls._lock:
@@ -459,13 +455,15 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
 
         super().__init__()
 
+        self.default_num_stages = get_backend_num_stages()
+
         # Exhaustive search for mm configs
         self.exhaustive_configs = [
             {"config": (BLOCK_M, BLOCK_N, BLOCK_K, num_stages, num_warps), "cond": True}
             for BLOCK_M, BLOCK_N, BLOCK_K in itertools.product(
                 [16, 32, 64, 128, 256], repeat=3
             )
-            for num_stages in [1, default_num_stages]
+            for num_stages in [1, self.default_num_stages]
             for num_warps in [4, 8]
         ]
 
@@ -527,25 +525,25 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
 
     def get_mm_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-            self.mm_configs, default_num_stages
+            self.mm_configs, self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_exhaustive_mm_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-            self.exhaustive_configs, num_stages=default_num_stages
+            self.exhaustive_configs, num_stages=self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_extra_mm_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-            self.extra_mm_configs, num_stages=default_num_stages
+            self.extra_mm_configs, num_stages=self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_int8_mm_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-            self.int8_mm_configs, num_stages=default_num_stages
+            self.int8_mm_configs, num_stages=self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
@@ -555,12 +553,12 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
             if config.max_autotune_gemm_search_space == "EXHAUSTIVE"
             else self.mm_configs
         )
-        filtered_configs = self._filter_configs(mm_configs, default_num_stages)
+        filtered_configs = self._filter_configs(mm_configs, self.default_num_stages)
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
     def get_persistent_mm_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-            self.persistent_mm_configs, num_stages=default_num_stages
+            self.persistent_mm_configs, num_stages=self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
@@ -572,7 +570,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
 
     def get_scaled_persistent_mm_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-            self.scaled_persistent_mm_configs, num_stages=default_num_stages
+            self.scaled_persistent_mm_configs, num_stages=self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
@@ -582,7 +580,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
 
     def get_conv_configs(self) -> List[Dict[str, Any]]:
         filtered_configs = self._filter_configs(
-            self.conv_configs, num_stages=default_num_stages
+            self.conv_configs, num_stages=self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
@@ -592,7 +590,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
                 BLOCK_M=16,
                 BLOCK_N=64,
                 BLOCK_K=128,
-                num_stages=2,
+                num_stages=self.default_num_stages,
                 num_warps=4,
             )
         elif m > 16 and m <= 32 and n >= 4096 and k >= 4096:
@@ -600,7 +598,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
                 BLOCK_M=32,
                 BLOCK_N=32,
                 BLOCK_K=128,
-                num_stages=2,
+                num_stages=self.default_num_stages,
                 num_warps=4,
             )
         elif m > 32 and m <= 64 and n >= 4096 and k >= 4096:
@@ -608,7 +606,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
                 BLOCK_M=64,
                 BLOCK_N=32,
                 BLOCK_K=128,
-                num_stages=2,
+                num_stages=self.default_num_stages,
                 num_warps=4,
             )
 

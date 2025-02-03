@@ -40,30 +40,30 @@ class BaseConfigHeuristic(metaclass=BaseConfigSingleton):
         # (BLOCK_M, BLOCK_N, BLOCK_K, num_stages, num_warps)
         self.mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
-            {"config": (32, 32, 16, 1, 2), "cond": True},
-            {"config": (32, 32, 128, 2, 4), "cond": True},
-            {"config": (32, 64, 32, 5, 8), "cond": True},
-            {"config": (64, 32, 32, 5, 8), "cond": True},
-            {"config": (64, 32, 128, 5, 4), "cond": True},
-            {"config": (64, 64, 16, 2, 4), "cond": True},
-            {"config": (64, 64, 32, 2, 4), "cond": True},
-            {"config": (64, 64, 64, 3, 8), "cond": True},
-            {"config": (64, 64, 128, 5, 4), "cond": True},
-            {"config": (64, 128, 32, 3, 4), "cond": True},
-            {"config": (64, 128, 32, 4, 8), "cond": True},
-            {"config": (64, 128, 64, 3, 4), "cond": True},
-            {"config": (64, 128, 128, 4, 4), "cond": True},
-            {"config": (128, 64, 32, 3, 4), "cond": True},
-            {"config": (128, 64, 32, 4, 8), "cond": True},
-            {"config": (128, 128, 32, 2, 8), "cond": True},
-            {"config": (128, 128, 32, 3, 4), "cond": True},
-            {"config": (128, 128, 64, 3, 4), "cond": True},
-            {"config": (128, 128, 64, 5, 8), "cond": True},
+            {"config": (32, 32, 16, 1, 2)},
+            {"config": (32, 32, 128, 2, 4)},
+            {"config": (32, 64, 32, 5, 8)},
+            {"config": (64, 32, 32, 5, 8)},
+            {"config": (64, 32, 128, 5, 4)},
+            {"config": (64, 64, 16, 2, 4)},
+            {"config": (64, 64, 32, 2, 4)},
+            {"config": (64, 64, 64, 3, 8)},
+            {"config": (64, 64, 128, 5, 4)},
+            {"config": (64, 128, 32, 3, 4)},
+            {"config": (64, 128, 32, 4, 8)},
+            {"config": (64, 128, 64, 3, 4)},
+            {"config": (64, 128, 128, 4, 4)},
+            {"config": (128, 64, 32, 3, 4)},
+            {"config": (128, 64, 32, 4, 8)},
+            {"config": (128, 128, 32, 2, 8)},
+            {"config": (128, 128, 32, 3, 4)},
+            {"config": (128, 128, 64, 3, 4)},
+            {"config": (128, 128, 64, 5, 8)},
         ]
 
         # Exhaustive search for mm configs
         self.exhaustive_configs = [
-            {"config": (BLOCK_M, BLOCK_N, BLOCK_K, num_stages, num_warps), "cond": True}
+            {"config": (BLOCK_M, BLOCK_N, BLOCK_K, num_stages, num_warps)}
             for BLOCK_M, BLOCK_N, BLOCK_K in itertools.product(
                 [16, 32, 64, 128, 256], repeat=3
             )
@@ -78,194 +78,187 @@ class BaseConfigHeuristic(metaclass=BaseConfigSingleton):
         # because the learned heuristic might predict a config that is not part mm_configs
         self.extra_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
-            {"config": (16, 32, 16, 3, 2), "cond": True},
-            {"config": (16, 32, 32, 4, 2), "cond": True},
-            {"config": (16, 32, 32, 5, 2), "cond": True},
-            {"config": (64, 64, 128, 3, 4), "cond": True},
-            {"config": (128, 64, 32, 2, 2), "cond": True},
-            {"config": (128, 64, 64, 3, 8), "cond": True},
-            {"config": (128, 64, 128, 4, 8), "cond": True},
-            {"config": (128, 128, 32, 4, 4), "cond": True},
-            {"config": (128, 128, 64, 3, 8), "cond": True},
-            {"config": (128, 128, 64, 5, 4), "cond": True},
+            {"config": (16, 32, 16, 3, 2)},
+            {"config": (16, 32, 32, 4, 2)},
+            {"config": (16, 32, 32, 5, 2)},
+            {"config": (64, 64, 128, 3, 4)},
+            {"config": (128, 64, 32, 2, 2)},
+            {"config": (128, 64, 64, 3, 8)},
+            {"config": (128, 64, 128, 4, 8)},
+            {"config": (128, 128, 32, 4, 4)},
+            {"config": (128, 128, 64, 3, 8)},
+            {"config": (128, 128, 64, 5, 4)},
         ]
 
         self.int8_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
-            {"config": (64, 64, 32, 2, 4), "cond": True},
-            {"config": (64, 128, 32, 3, 4), "cond": True},
-            {"config": (128, 64, 32, 3, 4), "cond": True},
-            {"config": (64, 128, 32, 4, 8), "cond": True},
-            {"config": (128, 64, 32, 4, 8), "cond": True},
-            {"config": (64, 32, 32, 5, 8), "cond": True},
-            {"config": (32, 64, 32, 5, 8), "cond": True},
-            {"config": (128, 128, 32, 2, 8), "cond": True},
-            {"config": (64, 64, 64, 3, 8), "cond": True},
-            {"config": (128, 256, 128, 3, 8), "cond": True},
-            {"config": (256, 128, 128, 3, 8), "cond": True},
+            {"config": (64, 64, 32, 2, 4)},
+            {"config": (64, 128, 32, 3, 4)},
+            {"config": (128, 64, 32, 3, 4)},
+            {"config": (64, 128, 32, 4, 8)},
+            {"config": (128, 64, 32, 4, 8)},
+            {"config": (64, 32, 32, 5, 8)},
+            {"config": (32, 64, 32, 5, 8)},
+            {"config": (128, 128, 32, 2, 8)},
+            {"config": (64, 64, 64, 3, 8)},
+            {"config": (128, 256, 128, 3, 8)},
+            {"config": (256, 128, 128, 3, 8)},
         ]
 
         self.mixed_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
-            {"config": (16, 128, 256, 3, 4), "cond": True},
-            {"config": (16, 128, 256, 5, 8), "cond": True},
+            {"config": (16, 128, 256, 3, 4)},
+            {"config": (16, 128, 256, 5, 8)},
         ]
 
         self.persistent_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
-            {"config": (128, 256, 64, 3, 8), "cond": True},
-            {"config": (128, 128, 64, 3, 8), "cond": True},
-            {"config": (128, 128, 128, 3, 8), "cond": True},
-            {"config": (128, 128, 128, 3, 4), "cond": True},
-            {"config": (128, 128, 64, 4, 8), "cond": True},
+            {"config": (128, 256, 64, 3, 8)},
+            {"config": (128, 128, 64, 3, 8)},
+            {"config": (128, 128, 128, 3, 8)},
+            {"config": (128, 128, 128, 3, 4)},
+            {"config": (128, 128, 64, 4, 8)},
         ]
 
         self.scaled_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
-            {"config": (128, 256, 32, 3, 8), "cond": True},
-            {"config": (256, 128, 32, 3, 8), "cond": True},
-            {"config": (256, 64, 32, 4, 4), "cond": True},
-            {"config": (64, 256, 32, 4, 4), "cond": True},
-            {"config": (128, 128, 32, 4, 4), "cond": True},
-            {"config": (128, 64, 32, 4, 4), "cond": True},
-            {"config": (64, 128, 32, 4, 4), "cond": True},
-            {"config": (128, 32, 32, 4, 4), "cond": True},
-            {"config": (64, 32, 32, 5, 2), "cond": True},
-            {"config": (256, 128, 128, 3, 8), "cond": True},
-            {"config": (256, 64, 128, 4, 4), "cond": True},
-            {"config": (64, 256, 128, 4, 4), "cond": True},
-            {"config": (128, 128, 128, 4, 4), "cond": True},
-            {"config": (128, 64, 64, 4, 4), "cond": True},
-            {"config": (64, 128, 64, 4, 4), "cond": True},
-            {"config": (128, 32, 64, 4, 4), "cond": True},
-            {"config": (64, 32, 64, 5, 2), "cond": True},
-            {"config": (16, 32, 32, 2, 2), "cond": True},
-            {"config": (16, 64, 32, 2, 2), "cond": True},
-            {"config": (16, 128, 32, 2, 4), "cond": True},
-            {"config": (16, 256, 32, 2, 4), "cond": True},
-            {"config": (16, 32, 64, 2, 2), "cond": True},
-            {"config": (16, 64, 64, 2, 2), "cond": True},
-            {"config": (16, 128, 64, 2, 4), "cond": True},
-            {"config": (16, 256, 64, 2, 4), "cond": True},
-            {"config": (32, 32, 32, 2, 2), "cond": True},
-            {"config": (32, 64, 32, 2, 2), "cond": True},
-            {"config": (32, 128, 32, 2, 4), "cond": True},
-            {"config": (32, 256, 32, 2, 4), "cond": True},
-            {"config": (32, 32, 64, 2, 2), "cond": True},
-            {"config": (32, 64, 64, 2, 2), "cond": True},
-            {"config": (32, 128, 64, 2, 4), "cond": True},
-            {"config": (32, 256, 64, 2, 4), "cond": True},
-            {"config": (16, 32, 32, 3, 2), "cond": True},
-            {"config": (16, 64, 32, 3, 2), "cond": True},
-            {"config": (16, 128, 32, 3, 4), "cond": True},
-            {"config": (16, 256, 32, 3, 4), "cond": True},
-            {"config": (16, 32, 64, 3, 2), "cond": True},
-            {"config": (16, 64, 64, 3, 2), "cond": True},
-            {"config": (16, 128, 64, 3, 4), "cond": True},
-            {"config": (16, 256, 64, 3, 4), "cond": True},
-            {"config": (32, 32, 32, 3, 2), "cond": True},
-            {"config": (32, 64, 32, 3, 2), "cond": True},
-            {"config": (32, 128, 32, 3, 4), "cond": True},
-            {"config": (32, 256, 32, 3, 4), "cond": True},
-            {"config": (32, 32, 64, 3, 2), "cond": True},
-            {"config": (32, 64, 64, 3, 2), "cond": True},
-            {"config": (32, 128, 64, 3, 4), "cond": True},
-            {"config": (32, 256, 64, 3, 4), "cond": True},
-            {"config": (16, 32, 32, 4, 2), "cond": True},
-            {"config": (16, 64, 32, 4, 2), "cond": True},
-            {"config": (16, 128, 32, 4, 4), "cond": True},
-            {"config": (16, 256, 32, 4, 4), "cond": True},
-            {"config": (16, 32, 64, 4, 2), "cond": True},
-            {"config": (16, 64, 64, 4, 2), "cond": True},
-            {"config": (16, 128, 64, 4, 4), "cond": True},
-            {"config": (16, 256, 64, 4, 4), "cond": True},
-            {"config": (32, 32, 32, 4, 2), "cond": True},
-            {"config": (32, 64, 32, 4, 2), "cond": True},
-            {"config": (32, 128, 32, 4, 4), "cond": True},
-            {"config": (32, 256, 32, 4, 4), "cond": True},
-            {"config": (32, 32, 64, 4, 2), "cond": True},
-            {"config": (32, 64, 64, 4, 2), "cond": True},
-            {"config": (32, 128, 64, 4, 4), "cond": True},
-            {"config": (32, 256, 64, 4, 4), "cond": True},
-            {"config": (16, 32, 32, 5, 2), "cond": True},
-            {"config": (16, 64, 32, 5, 2), "cond": True},
-            {"config": (16, 128, 32, 5, 4), "cond": True},
-            {"config": (16, 256, 32, 5, 4), "cond": True},
-            {"config": (16, 32, 64, 5, 2), "cond": True},
-            {"config": (16, 64, 64, 5, 2), "cond": True},
-            {"config": (16, 128, 64, 5, 4), "cond": True},
-            {"config": (16, 256, 64, 5, 4), "cond": True},
-            {"config": (32, 32, 32, 5, 2), "cond": True},
-            {"config": (32, 64, 32, 5, 2), "cond": True},
-            {"config": (32, 128, 32, 5, 4), "cond": True},
-            {"config": (32, 256, 32, 5, 4), "cond": True},
-            {"config": (32, 32, 64, 5, 2), "cond": True},
-            {"config": (32, 64, 64, 5, 2), "cond": True},
-            {"config": (32, 128, 64, 5, 4), "cond": True},
-            {"config": (32, 256, 64, 5, 4), "cond": True},
-            {"config": (16, 32, 32, 6, 2), "cond": True},
-            {"config": (16, 64, 32, 6, 2), "cond": True},
-            {"config": (16, 128, 32, 6, 4), "cond": True},
-            {"config": (16, 256, 32, 6, 4), "cond": True},
-            {"config": (16, 32, 64, 6, 2), "cond": True},
-            {"config": (16, 64, 64, 6, 2), "cond": True},
-            {"config": (16, 128, 64, 6, 4), "cond": True},
-            {"config": (16, 256, 64, 6, 4), "cond": True},
-            {"config": (32, 32, 32, 6, 2), "cond": True},
-            {"config": (32, 64, 32, 6, 2), "cond": True},
-            {"config": (32, 128, 32, 6, 4), "cond": True},
-            {"config": (32, 256, 32, 6, 4), "cond": True},
-            {"config": (32, 32, 64, 6, 2), "cond": True},
-            {"config": (32, 64, 64, 6, 2), "cond": True},
-            {"config": (32, 128, 64, 6, 4), "cond": True},
-            {"config": (32, 256, 64, 6, 4), "cond": True},
+            {"config": (128, 256, 32, 3, 8)},
+            {"config": (256, 128, 32, 3, 8)},
+            {"config": (256, 64, 32, 4, 4)},
+            {"config": (64, 256, 32, 4, 4)},
+            {"config": (128, 128, 32, 4, 4)},
+            {"config": (128, 64, 32, 4, 4)},
+            {"config": (64, 128, 32, 4, 4)},
+            {"config": (128, 32, 32, 4, 4)},
+            {"config": (64, 32, 32, 5, 2)},
+            {"config": (256, 128, 128, 3, 8)},
+            {"config": (256, 64, 128, 4, 4)},
+            {"config": (64, 256, 128, 4, 4)},
+            {"config": (128, 128, 128, 4, 4)},
+            {"config": (128, 64, 64, 4, 4)},
+            {"config": (64, 128, 64, 4, 4)},
+            {"config": (128, 32, 64, 4, 4)},
+            {"config": (64, 32, 64, 5, 2)},
+            {"config": (16, 32, 32, 2, 2)},
+            {"config": (16, 64, 32, 2, 2)},
+            {"config": (16, 128, 32, 2, 4)},
+            {"config": (16, 256, 32, 2, 4)},
+            {"config": (16, 32, 64, 2, 2)},
+            {"config": (16, 64, 64, 2, 2)},
+            {"config": (16, 128, 64, 2, 4)},
+            {"config": (16, 256, 64, 2, 4)},
+            {"config": (32, 32, 32, 2, 2)},
+            {"config": (32, 64, 32, 2, 2)},
+            {"config": (32, 128, 32, 2, 4)},
+            {"config": (32, 256, 32, 2, 4)},
+            {"config": (32, 32, 64, 2, 2)},
+            {"config": (32, 64, 64, 2, 2)},
+            {"config": (32, 128, 64, 2, 4)},
+            {"config": (32, 256, 64, 2, 4)},
+            {"config": (16, 32, 32, 3, 2)},
+            {"config": (16, 64, 32, 3, 2)},
+            {"config": (16, 128, 32, 3, 4)},
+            {"config": (16, 256, 32, 3, 4)},
+            {"config": (16, 32, 64, 3, 2)},
+            {"config": (16, 64, 64, 3, 2)},
+            {"config": (16, 128, 64, 3, 4)},
+            {"config": (16, 256, 64, 3, 4)},
+            {"config": (32, 32, 32, 3, 2)},
+            {"config": (32, 64, 32, 3, 2)},
+            {"config": (32, 128, 32, 3, 4)},
+            {"config": (32, 256, 32, 3, 4)},
+            {"config": (32, 32, 64, 3, 2)},
+            {"config": (32, 64, 64, 3, 2)},
+            {"config": (32, 128, 64, 3, 4)},
+            {"config": (32, 256, 64, 3, 4)},
+            {"config": (16, 32, 32, 4, 2)},
+            {"config": (16, 64, 32, 4, 2)},
+            {"config": (16, 128, 32, 4, 4)},
+            {"config": (16, 256, 32, 4, 4)},
+            {"config": (16, 32, 64, 4, 2)},
+            {"config": (16, 64, 64, 4, 2)},
+            {"config": (16, 128, 64, 4, 4)},
+            {"config": (16, 256, 64, 4, 4)},
+            {"config": (32, 32, 32, 4, 2)},
+            {"config": (32, 64, 32, 4, 2)},
+            {"config": (32, 128, 32, 4, 4)},
+            {"config": (32, 256, 32, 4, 4)},
+            {"config": (32, 32, 64, 4, 2)},
+            {"config": (32, 64, 64, 4, 2)},
+            {"config": (32, 128, 64, 4, 4)},
+            {"config": (32, 256, 64, 4, 4)},
+            {"config": (16, 32, 32, 5, 2)},
+            {"config": (16, 64, 32, 5, 2)},
+            {"config": (16, 128, 32, 5, 4)},
+            {"config": (16, 256, 32, 5, 4)},
+            {"config": (16, 32, 64, 5, 2)},
+            {"config": (16, 64, 64, 5, 2)},
+            {"config": (16, 128, 64, 5, 4)},
+            {"config": (16, 256, 64, 5, 4)},
+            {"config": (32, 32, 32, 5, 2)},
+            {"config": (32, 64, 32, 5, 2)},
+            {"config": (32, 128, 32, 5, 4)},
+            {"config": (32, 256, 32, 5, 4)},
+            {"config": (32, 32, 64, 5, 2)},
+            {"config": (32, 64, 64, 5, 2)},
+            {"config": (32, 128, 64, 5, 4)},
+            {"config": (32, 256, 64, 5, 4)},
+            {"config": (16, 32, 32, 6, 2)},
+            {"config": (16, 64, 32, 6, 2)},
+            {"config": (16, 128, 32, 6, 4)},
+            {"config": (16, 256, 32, 6, 4)},
+            {"config": (16, 32, 64, 6, 2)},
+            {"config": (16, 64, 64, 6, 2)},
+            {"config": (16, 128, 64, 6, 4)},
+            {"config": (16, 256, 64, 6, 4)},
+            {"config": (32, 32, 32, 6, 2)},
+            {"config": (32, 64, 32, 6, 2)},
+            {"config": (32, 128, 32, 6, 4)},
+            {"config": (32, 256, 32, 6, 4)},
+            {"config": (32, 32, 64, 6, 2)},
+            {"config": (32, 64, 64, 6, 2)},
+            {"config": (32, 128, 64, 6, 4)},
+            {"config": (32, 256, 64, 6, 4)},
         ]
 
         self.scaled_persistent_mm_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
-            {"config": (128, 128, 64, 3, 8), "cond": True},
-            {"config": (128, 128, 128, 3, 8), "cond": True},
-            {"config": (128, 128, 128, 4, 8), "cond": True},
-            {"config": (128, 128, 128, 4, 4), "cond": True},
-            {"config": (128, 128, 128, 3, 4), "cond": True},
-            {"config": (128, 128, 128, 5, 4), "cond": True},
-            {"config": (128, 128, 128, 5, 8), "cond": True},
-            {"config": (128, 128, 128, 6, 8), "cond": True},
-            {"config": (128, 128, 64, 4, 8), "cond": True},
+            {"config": (128, 128, 64, 3, 8)},
+            {"config": (128, 128, 128, 3, 8)},
+            {"config": (128, 128, 128, 4, 8)},
+            {"config": (128, 128, 128, 4, 4)},
+            {"config": (128, 128, 128, 3, 4)},
+            {"config": (128, 128, 128, 5, 4)},
+            {"config": (128, 128, 128, 5, 8)},
+            {"config": (128, 128, 128, 6, 8)},
+            {"config": (128, 128, 64, 4, 8)},
         ]
 
         # TODO: Unify with other gemm patterns, mm_plus_mm currently follows
         # slightly different pattern than rest
         self.mm_plus_mm_configs = [
-            {"config": (64, 64, 32, 2, 4), "cond": True},
-            {"config": (64, 64, 32, 3, 8), "cond": True},
-            {"config": (64, 64, 32, 4, 16), "cond": True},
-            {"config": (64, 32, 32, 4, 8), "cond": True},
-            {"config": (32, 64, 32, 4, 8), "cond": True},
-            {"config": (128, 128, 32, 1, 8), "cond": True},
-            {"config": (64, 64, 64, 1, 8), "cond": True},
-            {"config": (32, 32, 128, 1, 8), "cond": True},
-            {"config": (64, 64, 16, 2, 4), "cond": True},
-            {"config": (32, 32, 16, 1, 2), "cond": True},
+            {"config": (64, 64, 32, 2, 4)},
+            {"config": (64, 64, 32, 3, 8)},
+            {"config": (64, 64, 32, 4, 16)},
+            {"config": (64, 32, 32, 4, 8)},
+            {"config": (32, 64, 32, 4, 8)},
+            {"config": (128, 128, 32, 1, 8)},
+            {"config": (64, 64, 64, 1, 8)},
+            {"config": (32, 32, 128, 1, 8)},
+            {"config": (64, 64, 16, 2, 4)},
+            {"config": (32, 32, 16, 1, 2)},
         ]
 
         self.conv_configs = [
             # "BLOCK_M", "BLOCK_N", "BLOCK_K", "num_stages", "num_warps"
-            {"config": (64, 256, 16, 2, 4), "cond": True},
-            {"config": (256, 64, 16, 2, 4), "cond": True},
-            {"config": (1024, 16, 16, 1, 8), "cond": True},
-            {"config": (128, 128, 32, 2, 8), "cond": True},
-            {"config": (64, 64, 32, 2, 4), "cond": True},
-            {"config": (64, 256, 32, 2, 8), "cond": True},
-            {"config": (256, 64, 32, 2, 8), "cond": True},
+            {"config": (64, 256, 16, 2, 4)},
+            {"config": (256, 64, 16, 2, 4)},
+            {"config": (1024, 16, 16, 1, 8)},
+            {"config": (128, 128, 32, 2, 8)},
+            {"config": (64, 64, 32, 2, 4)},
+            {"config": (64, 256, 32, 2, 8)},
+            {"config": (256, 64, 32, 2, 8)},
         ]
-
-    def _filter_configs(self, configs):
-        return tuple(
-            cast(tuple[int, int, int, int, int], config["config"])
-            for config in configs
-            if config["cond"]
-        )
 
     def _finalize_mm_configs(
         self,
@@ -375,20 +368,16 @@ class BaseConfigHeuristic(metaclass=BaseConfigSingleton):
         return Config(kwargs, num_stages=num_stages, num_warps=num_warps)
 
     def get_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.mm_configs)
-        return partial(self.preprocess_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_configs, configs=self.mm_configs)
 
     def get_exhaustive_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.exhaustive_configs)
-        return partial(self.preprocess_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_configs, configs=self.exhaustive_configs)
 
     def get_extra_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.extra_mm_configs)
-        return partial(self.preprocess_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_configs, configs=self.extra_mm_configs)
 
     def get_int8_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.int8_mm_configs)
-        return partial(self.preprocess_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_configs, configs=self.int8_mm_configs)
 
     def get_mixed_mm_configs(self) -> List[Dict[str, Any]]:
         mm_configs = (
@@ -396,28 +385,22 @@ class BaseConfigHeuristic(metaclass=BaseConfigSingleton):
             if config.max_autotune_gemm_search_space == "EXHAUSTIVE"
             else self.mm_configs
         )
-        filtered_configs = self._filter_configs(mm_configs)
-        return partial(self.preprocess_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_configs, configs=mm_configs)
 
     def get_persistent_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.persistent_mm_configs)
-        return partial(self.preprocess_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_configs, configs=self.persistent_mm_configs)
 
     def get_scaled_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.scaled_mm_configs)
-        return partial(self.preprocess_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_configs, configs=self.scaled_mm_configs)
 
     def get_scaled_persistent_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.scaled_persistent_mm_configs)
-        return partial(self.preprocess_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_configs, configs=self.scaled_persistent_mm_configs)
 
     def get_mm_plus_mm_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.mm_plus_mm_configs)
-        return partial(self.preprocess_mm_plus_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_plus_mm_configs, configs=self.mm_plus_mm_configs)
 
     def get_conv_configs(self) -> List[Dict[str, Any]]:
-        filtered_configs = self._filter_configs(self.conv_configs)
-        return partial(self.preprocess_mm_configs, configs=filtered_configs)
+        return partial(self.preprocess_mm_configs, configs=self.conv_configs)
 
     def generate_mixed_mm_config(m, n, k):
         if m <= 16 and n >= 4096 and k >= 4096:
@@ -445,6 +428,8 @@ class BaseConfigHeuristic(metaclass=BaseConfigSingleton):
                 num_warps=4,
             )
 
+class CPUConfigHeuristic(BaseConfigHeuristic):
+    pass
 
 class CUDAConfigHeuristic(BaseConfigHeuristic):
     pass
@@ -459,7 +444,7 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
 
         # Exhaustive search for mm configs
         self.exhaustive_configs = [
-            {"config": (BLOCK_M, BLOCK_N, BLOCK_K, num_stages, num_warps), "cond": True}
+            {"config": (BLOCK_M, BLOCK_N, BLOCK_K, num_stages, num_warps)}
             for BLOCK_M, BLOCK_N, BLOCK_K in itertools.product(
                 [16, 32, 64, 128, 256], repeat=3
             )
@@ -468,13 +453,16 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
         ]
 
     def _filter_configs(self, configs, num_stages):
-        configs = tuple(
-            cast(tuple[int, int, int, int, int], config["config"])
-            for config in configs
-            if config["cond"]
+        return tuple(
+            (
+                c["config"][0],
+                c["config"][1],
+                c["config"][2],
+                num_stages,
+                c["config"][4]
+            )
+            for c in configs
         )
-
-        return tuple((c[0], c[1], c[2], num_stages, c[4]) for c in configs)
 
     def _finalize_mm_configs(
         self,

@@ -2,6 +2,7 @@
 
 import torch
 
+from .. import ir
 from ..lowering import lowerings
 from ..select_algorithm import (
     autotune_select_algorithm,
@@ -117,6 +118,8 @@ def tuned_mm_plus_mm(mat1, mat2, mat3, mat4, *, layout=None):
     """
     m1, n1, k1, layout1, mat1, mat2 = mm_args(mat1, mat2, layout=layout)
     m2, n2, _, layout2, mat3, mat4 = mm_args(mat3, mat4, layout=layout)
+    device_type = ir.get_device_type(mat1)
+
     # Optimization is optional, because we can always just not do the fusion
     if (
         m1 * n1 == 0
@@ -142,7 +145,7 @@ def tuned_mm_plus_mm(mat1, mat2, mat3, mat4, *, layout=None):
         else []
     )
 
-    mm_configs = V.choices.get_mm_plus_mm_configs()
+    mm_configs = V.choices.get_mm_plus_mm_configs(device_type)
 
     if use_triton_template(layout1):
         for config in mm_configs():

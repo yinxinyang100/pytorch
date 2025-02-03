@@ -457,6 +457,8 @@ def convolution(
         "groups": groups,
     }
 
+    device_type = ir.get_device_type(x)
+
     if len(x.get_size()) == len(weight.get_size()) - 1:
         # add batch dimension to simplify rest of function
         return L[aten.squeeze](
@@ -474,7 +476,7 @@ def convolution(
     if (
         len(x.get_size()) == 3
         and len(kernel_shape) == 1
-        and ir.get_device_type(x) == "xpu"
+        and device_type == "xpu"
     ):
         kwargs.update(
             {
@@ -524,7 +526,7 @@ def convolution(
     ):
         return convert_1x1_conv_to_mm(x, weight, bias)
 
-    if bias is not None and ir.get_device_type(x) != "cpu":
+    if bias is not None and device_type != "cpu":
         # peel off the bias, cudnn is slower with it
         result = convolution(x, weight, None, **kwargs)
         return L[aten.add](
@@ -599,13 +601,13 @@ def convolution(
         ):
             choices.append(aten_conv1x1_via_mm.bind(args, layout))
 
-        conv_configs = V.choices.get_conv_configs()
+        conv_configs = V.choices.get_conv_configs(device_type)
 
         for cfg in conv_configs(
             sympy_product([x.get_size()[0], *x.get_size()[2:]]),
             out_chan,
             in_chan,
-            **mm_config_kwargs(ir.get_device_type(x)),
+            **mm_config_kwargs(device_type, _is_large_block_for_cpu),
         ):
             if ndim == 2:
                 conv2d_template.maybe_append_choice(

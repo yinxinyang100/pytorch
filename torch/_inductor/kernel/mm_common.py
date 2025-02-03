@@ -116,11 +116,11 @@ def mm_args(
     return [m, n, k, layout, mat1, mat2, *others]
 
 
-def mm_config_kwargs(device):
+def mm_config_kwargs(device, exclude_condition):
     if device == "cpu":
         return {
             "scale": 0.5,
-            "exclude": _is_large_block_for_cpu,
+            "exclude": exclude_condition,
         }
     return {}
 

@@ -37,11 +37,7 @@ def bmm_grid(b, m, n, meta):
 
 
 def _is_large_block_for_cpu(m, n, k):
-    # Thresholds are experimentally determined to reduce Triton CPU compile times
-    if m > 128 or n > 128 or k > 128:
-        return True
     return m * n > 2**12
-
 
 bmm_template = TritonTemplate(
     name="bmm",
@@ -164,11 +160,12 @@ def tuned_bmm(mat1, mat2, *, layout=None):
     # options to tune from
     choices = [aten_bmm.bind((mat1, mat2), layout)] if use_aten_gemm_kernels() else []
 
-    bmm_configs = V.choices.get_base_mm_configs()
+    device_type = ir.get_device_type(mat1)
+    bmm_configs = V.choices.get_base_mm_configs(device_type)
 
     if use_triton_template(layout):
         for config in bmm_configs(
-            m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))
+            m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)
         ):
             bmm_template.maybe_append_choice(
                 choices,
@@ -211,11 +208,12 @@ def tuned_baddbmm(inp, mat1, mat2, *, alpha=1, beta=1, layout=None):
         else []
     )
 
-    bmm_configs = V.choices.get_base_mm_configs()
+    device_type = ir.get_device_type(mat1)
+    bmm_configs = V.choices.get_base_mm_configs(device_type)
 
     if use_triton_template(layout):
         for config in bmm_configs(
-            m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))
+            m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)
         ):
             bmm_template.maybe_append_choice(
                 choices,

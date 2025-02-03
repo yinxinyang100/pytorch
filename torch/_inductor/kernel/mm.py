@@ -280,6 +280,7 @@ aten_bias_addmm = ExternKernelChoice(bias_addmm, None)
 @register_lowering(aten.mm, type_promotion_kind=None)
 def tuned_mm(mat1, mat2, *, layout=None):
     m, n, k, layout, mat1, mat2 = mm_args(mat1, mat2, layout=layout)
+    device_type = ir.get_device_type(mat1)
     name = "mm"
 
     aten_layout = layout
@@ -294,12 +295,12 @@ def tuned_mm(mat1, mat2, *, layout=None):
     )
     static_shape, is_nonzero = _is_static_problem(layout)
 
-    mm_configs = V.choices.get_base_mm_configs()
-    persistent_mm_configs = V.choices.get_persistent_mm_configs()
-    extra_mm_configs = V.choices.get_extra_mm_configs()
+    mm_configs = V.choices.get_base_mm_configs(device_type)
+    persistent_mm_configs = V.choices.get_persistent_mm_configs(device_type)
+    extra_mm_configs = V.choices.get_extra_mm_configs(device_type)
 
     if is_nonzero and use_triton_template(layout):
-        for config in mm_configs(m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))):
+        for config in mm_configs(m, n, k, *mm_config_kwargs(device_type, _is_large_block_for_cpu)):
             mm_template.maybe_append_choice(
                 choices,
                 input_nodes=(mat1, mat2),
@@ -308,7 +309,7 @@ def tuned_mm(mat1, mat2, *, layout=None):
             )
         if use_triton_tma_template(mat1, mat2):
             for config in persistent_mm_configs(
-                m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))
+                m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)
             ):
                 persistent_tma_mm_template.maybe_append_choice(
                     choices,
@@ -347,7 +348,7 @@ def tuned_mm(mat1, mat2, *, layout=None):
             always_included.append("extern_mm")
         num_choices_before_extra_configs = len(choices)
         for config in extra_mm_configs(
-            m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))
+            m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)
         ):
             mm_template.maybe_append_choice(
                 choices,
@@ -407,6 +408,7 @@ def tuned_int_mm(mat1, mat2, *, layout=None):
     m, n, k, layout, mat1, mat2 = mm_args(
         mat1, mat2, layout=layout, out_dtype=torch.int32
     )
+    device_type = ir.get_device_type(mat1)
     static_shape, is_nonzero = _is_static_problem(layout)
     use_cutlass = static_shape and is_nonzero and use_cutlass_template(layout, m, n, k)
 
@@ -423,11 +425,11 @@ def tuned_int_mm(mat1, mat2, *, layout=None):
             choices, layout, [mat1, mat2], fuseable=True, non_fuseable=True
         )
 
-    int8_mm_configs = V.choices.get_int8_mm_configs()
+    int8_mm_configs = V.choices.get_int8_mm_configs(device_type)
 
     if is_nonzero and use_triton_template(layout, enable_int32=True):
         for config in int8_mm_configs(
-            m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))
+            m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)
         ):
             mm_template.maybe_append_choice(
                 choices,
@@ -454,6 +456,7 @@ def tuned_int_mm(mat1, mat2, *, layout=None):
 @register_lowering(aten.addmm, type_promotion_kind=None)
 def tuned_addmm(inp, mat1, mat2, *, alpha=1, beta=1, layout=None):
     ordered_kwargs_for_cpp_kernel = ("beta", "alpha")
+    device_type = ir.get_device_type(mat1)
     m, n, k, layout, mat1, mat2, inp_expanded = mm_args(mat1, mat2, inp, layout=layout)
     static_shape, is_nonzero = _is_static_problem(layout)
     if (not is_nonzero) or (not use_max_autotune()):
@@ -506,11 +509,11 @@ def tuned_addmm(inp, mat1, mat2, *, alpha=1, beta=1, layout=None):
             ),
         )
 
-    mm_configs = V.choices.get_base_mm_configs()
-    persistent_mm_configs = V.choices.get_persistent_mm_configs()
+    mm_configs = V.choices.get_base_mm_configs(device_type)
+    persistent_mm_configs = V.choices.get_persistent_mm_configs(device_type)
 
     if is_nonzero and use_triton_template(layout):
-        for config in mm_configs(m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))):
+        for config in mm_configs(m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)):
             mm_template.maybe_append_choice(
                 choices,
                 input_nodes=(inp_expanded, mat1, mat2),
@@ -522,7 +525,7 @@ def tuned_addmm(inp, mat1, mat2, *, alpha=1, beta=1, layout=None):
 
         if use_triton_tma_template(mat1, mat2):
             for config in persistent_mm_configs(
-                m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))
+                m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)
             ):
                 persistent_tma_mm_template.maybe_append_choice(
                     choices,
@@ -800,6 +803,7 @@ def get_size_hints_strides(mat1, mat2):
 
 def tuned_mixed_mm(mat1, mat2, mat2_dtype):
     m, n, k, layout, mat1, mat2 = mm_args(mat1, mat2, layout=None)
+    device_type = ir.get_device_type(mat1)
     static_shape, is_nonzero = _is_static_problem(layout)
 
     fallback = aten_fallback_mixed_mm.bind((mat1, mat2), layout)
@@ -825,8 +829,8 @@ def tuned_mixed_mm(mat1, mat2, mat2_dtype):
         choices = []
 
     if not skip_triton:
-        mm_heuristic = V.choices.get_config_heuristics()
-        mixed_mm_configs = V.choices.get_mixed_mm_configs()
+        mm_heuristic = V.choices.get_config_heuristics(device_type)
+        mixed_mm_configs = V.choices.get_mixed_mm_configs(device_type)
 
         b_prologue_cast_type = f"tl.{mat2_dtype}".replace("torch.", "")
         if static_shape and inductor_config.mixed_mm_choice == "heuristic":
@@ -850,9 +854,8 @@ def tuned_mixed_mm(mat1, mat2, mat2_dtype):
             n,
             k,
             has_int8_tensor=has_int8_tensor,
-            **mm_config_kwargs(ir.get_device_type(mat1)),
+            **mm_config_kwargs(device_type, _is_large_block_for_cpu),
         ):
-            print(choices)
             mm_template.maybe_append_choice(
                 choices,
                 input_nodes=(mat1, mat2),
@@ -908,14 +911,15 @@ def tuned_fused_int_mm_mul(mat1, mat2, mat3, out_dtype, *, layout=None):
     m, n, k, layout, mat1, mat2, mat3 = mm_args(
         mat1, mat2, mat3, layout=layout, out_dtype=out_dtype
     )
+    device_type = ir.get_device_type(mat1)
 
     def mul_epilogue(v1, v2):
         return V.ops.mul(v1, v2)
 
     choices: list[dict[Any, Any]] = []
-    int8_mm_configs = V.choices.get_int8_mm_configs()
+    int8_mm_configs = V.choices.get_int8_mm_configs(device_type)
     for config in int8_mm_configs(
-        m, n, k, **mm_config_kwargs(ir.get_device_type(mat1))
+        m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)
     ):
         mm_template.maybe_append_choice(
             choices,

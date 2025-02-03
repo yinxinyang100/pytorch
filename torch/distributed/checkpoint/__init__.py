@@ -2,6 +2,7 @@ from . import _extension
 from .api import CheckpointException
 from .default_planner import DefaultLoadPlanner, DefaultSavePlanner
 from .filesystem import FileSystemReader, FileSystemWriter
+from .hf_torchtune_storage import HuggingFaceHubTorchTuneReader, HuggingFaceHubTorchTuneWriter
 from .metadata import (
     BytesStorageMetadata,
     ChunkStorageMetadata,

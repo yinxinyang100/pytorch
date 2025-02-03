@@ -1,5 +1,6 @@
 # mypy: allow-untyped-defs
 import contextlib
+import itertools
 import logging
 import math
 from functools import lru_cache
@@ -1253,7 +1254,10 @@ class CppGemmTemplate(CppTemplate):
         #   Y
         if epilogue_creators:
             assert isinstance(template_buffer, ir.IRNode)
-            gemm_output_name = f"{template_buffer.get_name()}_GemmOut"
+            name_suffix = self.next_gemm_output_name_id()
+            gemm_output_name = (
+                f"{template_buffer.get_name()}_GemmOut" + f"_{name_suffix}"
+            )
             gemm_output_buffer = ir.Buffer(
                 name=gemm_output_name, layout=template_buffer.layout
             )
@@ -1444,3 +1448,8 @@ class CppGemmTemplate(CppTemplate):
 
     def codegen_n_loop_params(self):
         return self._template_from_string(GEMM_TEMPLATE_N_LOOP_PARAMS).render()
+
+    gemm_output_name_count = itertools.count()
+
+    def next_gemm_output_name_id(self) -> str:
+        return str(next(CppGemmTemplate.gemm_output_name_count))

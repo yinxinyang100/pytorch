@@ -362,19 +362,19 @@ class BaseConfigHeuristic(metaclass=BaseConfigSingleton):
 
         return TritonConfig(kwargs, num_stages=num_stages, num_warps=num_warps)
 
-    def get_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_mm_configs(self) -> partial:
         return partial(self.preprocess_mm_configs, configs=self.mm_configs)
 
-    def get_exhaustive_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_exhaustive_mm_configs(self) -> partial:
         return partial(self.preprocess_mm_configs, configs=self.exhaustive_configs)
 
-    def get_extra_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_extra_mm_configs(self) -> partial:
         return partial(self.preprocess_mm_configs, configs=self.extra_mm_configs)
 
-    def get_int8_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_int8_mm_configs(self) -> partial:
         return partial(self.preprocess_mm_configs, configs=self.int8_mm_configs)
 
-    def get_mixed_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_mixed_mm_configs(self) -> partial:
         mm_configs = (
             self.mm_configs + self.mixed_mm_configs
             if config.max_autotune_gemm_search_space == "EXHAUSTIVE"
@@ -382,23 +382,23 @@ class BaseConfigHeuristic(metaclass=BaseConfigSingleton):
         )
         return partial(self.preprocess_mm_configs, configs=mm_configs)
 
-    def get_persistent_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_persistent_mm_configs(self) -> partial:
         return partial(self.preprocess_mm_configs, configs=self.persistent_mm_configs)
 
-    def get_scaled_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_scaled_mm_configs(self) -> partial:
         return partial(self.preprocess_mm_configs, configs=self.scaled_mm_configs)
 
-    def get_scaled_persistent_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_scaled_persistent_mm_configs(self) -> partial:
         return partial(
             self.preprocess_mm_configs, configs=self.scaled_persistent_mm_configs
         )
 
-    def get_mm_plus_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_mm_plus_mm_configs(self) -> partial:
         return partial(
             self._finalize_mm_configs, configs=self.mm_plus_mm_configs
         )
 
-    def get_conv_configs(self) -> List[Dict[str, Any]]:
+    def get_conv_configs(self) -> partial:
         return partial(self.preprocess_mm_configs, configs=self.conv_configs)
 
     def generate_mixed_mm_config(self, m, n, k):
@@ -506,31 +506,31 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
                     )
 
 
-    def get_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_mm_configs(self) -> partial:
         filtered_configs = self._filter_configs(
             self.mm_configs, self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
-    def get_exhaustive_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_exhaustive_mm_configs(self) -> partial:
         filtered_configs = self._filter_configs(
             self.exhaustive_configs, self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
-    def get_extra_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_extra_mm_configs(self) -> partial:
         filtered_configs = self._filter_configs(
             self.extra_mm_configs, self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
-    def get_int8_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_int8_mm_configs(self) -> partial:
         filtered_configs = self._filter_configs(
             self.int8_mm_configs, self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
-    def get_mixed_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_mixed_mm_configs(self) -> partial:
         mm_configs = (
             self.mm_configs + self.mixed_mm_configs
             if config.max_autotune_gemm_search_space == "EXHAUSTIVE"
@@ -539,29 +539,29 @@ class ROCmConfigHeuristic(BaseConfigHeuristic):
         filtered_configs = self._filter_configs(mm_configs, self.default_num_stages)
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
-    def get_persistent_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_persistent_mm_configs(self) -> partial:
         filtered_configs = self._filter_configs(
             self.persistent_mm_configs, self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
-    def get_scaled_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_scaled_mm_configs(self) -> partial:
         filtered_configs = self._filter_configs(
             self.scaled_mm_configs, self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
 
-    def get_scaled_persistent_mm_configs(self) -> List[Dict[str, Any]]:
+    def get_scaled_persistent_mm_configs(self) -> partial:
         filtered_configs = self._filter_configs(
             self.scaled_persistent_mm_configs, self.default_num_stages
         )
         return partial(self.preprocess_mm_configs, configs=filtered_configs)
-
-    def get_mm_plus_mm_configs(self) -> List[Dict[str, Any]]:
+    
+    def get_mm_plus_mm_configs(self) -> partial:
         filtered_configs = self._filter_configs(self.mm_plus_mm_configs, 1)
         return partial(self._finalize_mm_configs, configs=filtered_configs)
 
-    def get_conv_configs(self) -> List[Dict[str, Any]]:
+    def get_conv_configs(self) -> partial:
         filtered_configs = self._filter_configs(
             self.conv_configs, self.default_num_stages
         )

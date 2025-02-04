@@ -12,7 +12,7 @@ import pathlib
 from typing import Any, Callable, TYPE_CHECKING
 
 import torch
-import torch.utils.pytree.python as pytree
+import torch.utils.pytree as pytree
 
 
 if TYPE_CHECKING:
@@ -270,7 +270,7 @@ class JitTraceConvertStrategy(CaptureStrategy):
                 results = self.model(*unflattened_args, **unflattened_kwargs)
                 if not isinstance(results, tuple):
                     results = (results,)
-                flattened_results, _ = pytree.tree_flatten(results)
+                flattened_results = pytree.tree_leaves(results)
                 if len(flattened_results) == 1:
                     return flattened_results[0]
                 return tuple(flattened_results)

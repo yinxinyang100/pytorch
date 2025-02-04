@@ -11,7 +11,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any, Callable, TYPE_CHECKING
 
 import torch
-import torch.utils.pytree.python as pytree
+import torch.utils.pytree as pytree
 from torch.onnx._internal._lazy_import import onnxscript_apis, onnxscript_ir as ir
 from torch.onnx._internal.exporter import _core, _onnx_program, _registration
 
@@ -117,7 +117,7 @@ def _unflatten_dynamic_shapes_with_inputs_tree(
     inputs: list[Any],
     dynamic_shapes: dict[str, Any | None],
 ) -> dict[str, Any | None]:
-    _, tree_structure = pytree.tree_flatten(inputs)
+    tree_structure = pytree.tree_structure(inputs)
     return pytree.tree_unflatten(dynamic_shapes.values(), tree_structure)
 
 

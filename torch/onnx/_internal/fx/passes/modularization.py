@@ -9,7 +9,7 @@ from typing import Any, Final, TYPE_CHECKING
 
 import torch
 import torch.fx
-import torch.utils.pytree.python as pytree
+import torch.utils.pytree as pytree
 from torch.onnx._internal.fx import _pass, diagnostics
 
 
@@ -564,8 +564,8 @@ class _ModuleNode(_IRNode):
                 module_inputs[arg] = None
 
         for node in nodes:
-            pytree.tree_map(_extract_arg_if_node_outside_module, node.args)
-            pytree.tree_map(_extract_arg_if_node_outside_module, node.kwargs)
+            pytree.tree_map_(_extract_arg_if_node_outside_module, node.args)
+            pytree.tree_map_(_extract_arg_if_node_outside_module, node.kwargs)
         return list(module_inputs.keys())
 
     def module_outputs(self) -> Sequence[torch.fx.Node]:

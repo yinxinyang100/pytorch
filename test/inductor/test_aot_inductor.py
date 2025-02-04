@@ -56,7 +56,6 @@ from torch.utils._triton import has_triton_tma
 
 if HAS_GPU:
     import triton  # @manual
-    from triton import language as tl
 
     from torch.testing._internal.triton_utils import (
         add_kernel,
@@ -69,6 +68,7 @@ if HAS_GPU:
         add_kernel_with_tma_2d,
         mul2_inplace_kernel,
     )
+    from triton import language as tl
 
 if IS_WINDOWS and IS_CI:
     sys.stderr.write(
@@ -2238,7 +2238,7 @@ class AOTInductorTestsTemplate:
         example_inputs = (torch.randn(10, 10, device=self.device),)
         optimized = torch._inductor.aoti_load_package(
             torch._inductor.aoti_compile_and_package(
-                torch.export.export(Model(), example_inputs)
+                torch.export.export(Model(), example_inputs, strict=True)
             )
         )
         try:

@@ -54,6 +54,7 @@ from .ir import (
     IndexingConstant,
     IRNode,
     is_triton,
+    MultiOutputReduction,
     ops_wrapper,
     PermuteView,
     Pointwise,
@@ -6780,6 +6781,29 @@ from .comm_lowering import register_comm_lowerings
 
 
 register_comm_lowerings()
+
+# Lowering inductor_prims.online_softmax to do a customized reduction.
+#
+# A lowering without online softmax for reference:
+#
+# @register_lowering(inductor_prims.online_softmax, type_promotion_kind=None)
+# def online_softmax(x, dim):
+#     amax = reduce_amax(x, dim, keepdims=True)
+#     exp = lowerings[aten.exp](sub(x, amax))
+#     xsum = sum_(exp, dim, keepdims=True)
+#     return amax, xsum
+
+
+@register_lowering(inductor_prims.online_softmax, type_promotion_kind=None)
+def online_softmax(x, dim):
+    kwargs = _make_reduction_inner(
+        x, axis=dim, keepdims=True, dtype=None, override_return_dtype=None
+    )
+    max_tensor, sum_tensor = MultiOutputReduction.create(
+        reduction_type="online_softmax_reduce", input_node=x, num_output=2, **kwargs
+    )
+    return max_tensor, sum_tensor
+
 
 # populate lowerings defined in kernel/*
 from . import kernel

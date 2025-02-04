@@ -1487,6 +1487,7 @@ class Reduction(Loops):
             "any": 0,
             "welford_reduce": (0, 0, 0),
             "welford_combine": (0, 0, 0),
+            "online_softmax_reduce": (float("-inf"), 0),
         }[reduction_type]
 
     @staticmethod
@@ -1720,6 +1721,87 @@ class Reduction(Loops):
             -1,
             reduction_hint,
         )
+
+
+class MultiOutputReduction(Reduction):
+    output_index: int
+
+    def __init__(
+        self,
+        device: torch.device,
+        dst_dtype: torch.dtype,
+        inner_fn: Callable[[Sequence[Expr], Sequence[Expr]], OpsValue],
+        ranges: Sequence[Integer],
+        reduction_ranges: Sequence[Integer],
+        reduction_type: str,
+        src_dtype: torch.dtype,
+        reduction_hint: ReductionHint,
+        output_index: int,
+    ):
+        super().__init__(
+            device=device,
+            dtype=dst_dtype,
+            inner_fn=inner_fn,
+            ranges=ranges,
+            reduction_ranges=reduction_ranges,
+            reduction_type=reduction_type,
+            src_dtype=src_dtype,
+            reduction_hint=reduction_hint,
+        )
+        self.output_index = output_index
+
+    def store_reduction(
+        self,
+        output_name: Optional[str],
+        indexer: Callable[[Sequence[Expr]], Never],
+        vars: Sequence[Expr],
+        reduction_vars: Sequence[Symbol],
+    ) -> OpsValue:
+        values = ops.reduction(
+            self.dtype,
+            self.src_dtype,
+            self.reduction_type,
+            self.inner_fn(vars, reduction_vars),
+        )
+        if isinstance(values, (tuple, list)):
+            value = values[self.output_index]
+        else:
+            value = values
+        return ops.store_reduction(output_name, indexer(vars), value)
+
+    @classmethod
+    def create(  # type: ignore[override]
+        cls,
+        device: torch.device,
+        dst_dtype: torch.dtype,
+        src_dtype: torch.dtype,
+        inner_fn: Callable[..., Any],
+        ranges: Sequence[Expr],
+        reduction_ranges: Sequence[Expr],
+        reduction_type: str,
+        num_output: int,
+        reduction_hint: ReductionHint = ReductionHint.DEFAULT,
+        input_node: Optional[IRNode] = None,
+    ) -> Sequence[TensorBox]:
+        results = tuple(
+            TensorBox.create(
+                MultiOutputReduction(
+                    device,
+                    dst_dtype,
+                    inner_fn,
+                    ranges,
+                    reduction_ranges,
+                    reduction_type,
+                    src_dtype,
+                    reduction_hint,
+                    output_idx,
+                )
+            )
+            for output_idx in range(num_output)
+        )
+        for t in results:
+            t.realize()
+        return results
 
 
 class WelfordReduction(Reduction):

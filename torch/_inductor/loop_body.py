@@ -478,6 +478,8 @@ class LoopBodyBlock:
                 result = self._inner.reduction(dtype, src_dtype, reduction_type, value)
                 if "welford" in reduction_type:
                     return tuple(result[i] for i in range(3))
+                if reduction_type == "online_softmax_reduce":
+                    return tuple(result[i] for i in range(2))
                 return result
 
             def index_expr(self, index, dtype):

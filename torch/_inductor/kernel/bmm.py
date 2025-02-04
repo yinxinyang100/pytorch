@@ -39,6 +39,7 @@ def bmm_grid(b, m, n, meta):
 def _is_large_block_for_cpu(m, n, k):
     return m * n > 2**12
 
+
 bmm_template = TritonTemplate(
     name="bmm",
     grid=bmm_grid,

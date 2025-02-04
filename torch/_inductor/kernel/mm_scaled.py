@@ -10,7 +10,7 @@ from torch.utils._triton import has_triton_tma_device
 
 from .. import config as inductor_config
 from ..config import triton as triton_config
-from ..ir import _IntLike, ChoiceCaller, Layout, StorageBox, TensorBox, get_device_type
+from ..ir import _IntLike, ChoiceCaller, get_device_type, Layout, StorageBox, TensorBox
 from ..lowering import add_layout_constraint, constrain_to_fx_strides, register_lowering
 from ..select_algorithm import (
     autotune_select_algorithm,
@@ -536,7 +536,9 @@ def tuned_scaled_mm(
     _, is_nonzero = _is_static_problem(layout)
 
     scaled_mm_configs = V.choices.get_scaled_mm_configs(device_type)
-    scaled_persistent_mm_configs = V.choices.get_scaled_persistent_mm_configs(device_type)
+    scaled_persistent_mm_configs = V.choices.get_scaled_persistent_mm_configs(
+        device_type
+    )
 
     if is_nonzero and use_triton_template(layout, enable_float8=True):
         if use_persistent_tma(k, bias is not None):

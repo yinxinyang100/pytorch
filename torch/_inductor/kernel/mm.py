@@ -300,7 +300,9 @@ def tuned_mm(mat1, mat2, *, layout=None):
     extra_mm_configs = V.choices.get_extra_mm_configs(device_type)
 
     if is_nonzero and use_triton_template(layout):
-        for config in mm_configs(m, n, k, *mm_config_kwargs(device_type, _is_large_block_for_cpu)):
+        for config in mm_configs(
+            m, n, k, *mm_config_kwargs(device_type, _is_large_block_for_cpu)
+        ):
             mm_template.maybe_append_choice(
                 choices,
                 input_nodes=(mat1, mat2),
@@ -513,7 +515,9 @@ def tuned_addmm(inp, mat1, mat2, *, alpha=1, beta=1, layout=None):
     persistent_mm_configs = V.choices.get_persistent_mm_configs(device_type)
 
     if is_nonzero and use_triton_template(layout):
-        for config in mm_configs(m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)):
+        for config in mm_configs(
+            m, n, k, **mm_config_kwargs(device_type, _is_large_block_for_cpu)
+        ):
             mm_template.maybe_append_choice(
                 choices,
                 input_nodes=(inp_expanded, mat1, mat2),

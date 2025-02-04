@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import logging
-from typing import cast, List, Optional, TYPE_CHECKING, TypedDict
+from typing import Optional, TYPE_CHECKING, TypedDict
 
 import torch
 from torch._inductor.codegen.rocm.ck_conv_template import CKGroupedConvFwdTemplate
@@ -473,11 +473,7 @@ def convolution(
     # Always convert conv1D to 2D for Intel GPU.
     # Only conv2D can be converted to channel last layout,
     # which have much better performance.
-    if (
-        len(x.get_size()) == 3
-        and len(kernel_shape) == 1
-        and device_type == "xpu"
-    ):
+    if len(x.get_size()) == 3 and len(kernel_shape) == 1 and device_type == "xpu":
         kwargs.update(
             {
                 "stride": (1,) + stride,

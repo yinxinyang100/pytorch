@@ -3,7 +3,6 @@ import logging
 from typing import TYPE_CHECKING
 
 from .. import ir
-
 from ..select_algorithm import autotune_select_algorithm, TritonTemplate
 from ..virtualized import V
 from .mm_common import mm_args, mm_grid, mm_options

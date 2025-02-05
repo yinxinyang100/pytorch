@@ -31,7 +31,12 @@ from typing import Any, Callable, Dict, List, Optional, TYPE_CHECKING, Union
 from typing_extensions import TypeAlias
 
 import torch
-from torch._dynamo.utils import counters, get_runtime_metrics_context
+from torch._dynamo.utils import (
+    counters,
+    get_runtime_metrics_context,
+    runtime_compile_context,
+    RuntimeCompileContext,
+)
 from torch._inductor.cudagraph_utils import (
     BoxedDeviceIndex,
     CudagraphCachedInfo,
@@ -320,6 +325,7 @@ class CompiledFxGraph(OutputCode):
     inputs_to_check: Sequence[int]
     boxed_forward_device_index: Optional[BoxedDeviceIndex]
 
+    _runtime_ctx: Optional[RuntimeCompileContext] = None
     _boxed_call: Optional[bool] = None
     _triton_bundle: Optional[list[TritonKernelArtifacts]] = None
 
@@ -451,16 +457,24 @@ class CompiledFxGraph(OutputCode):
         # TODO: should this be part of fx_kwargs
         self.boxed_forward_device_index = boxed_forward_device_index
 
+        # Set the compile context so it's available for logging runtime events.
+        self._runtime_ctx = RuntimeCompileContext(
+            torch._guards.CompileContext.current_trace_id(),
+        )
+
         # aot autograd needs to know to pass in inputs as a list
         self._boxed_call = True
 
     def __call__(self, inputs: Sequence[Any]) -> Any:
         assert self.current_callable is not None
-        try:
-            return self.current_callable(inputs)
-        finally:
-            get_runtime_metrics_context().finish()
-            AutotuneCacheBundler.end_compile()
+        with runtime_compile_context(self._runtime_ctx):
+            try:
+                return self.current_callable(inputs)
+            finally:
+                get_runtime_metrics_context().finish(
+                    {"is_forward": not self.fx_kwargs["is_backward"]}
+                )
+                AutotuneCacheBundler.end_compile()
 
     def post_compile(
         self,
@@ -517,6 +531,10 @@ class CompiledFxGraph(OutputCode):
         # models to disk.
         self.current_callable = None
 
+        # The runtime context is not valid when deserialized in a different
+        # context, so be safe and clear it.
+        self._runtime_ctx = None
+
     def after_deserialization(self, constants: CompiledFxGraphConstants) -> str:
         from torch._dynamo.utils import counters, dynamo_timed
         from torch._inductor.codecache import (
@@ -557,6 +575,12 @@ class CompiledFxGraph(OutputCode):
                     self.cache_linemap,
                     constants.unwrap(self),
                 ).call
+
+            # Set the compile context so it's available for logging runtime events.
+            self._runtime_ctx = RuntimeCompileContext(
+                torch._guards.CompileContext.current_trace_id(),
+            )
+
         except OSError:
             log.error("Failed to load artifact: %s", artifact_path)
             raise

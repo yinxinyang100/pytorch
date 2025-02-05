@@ -70,6 +70,7 @@
 #ifdef USE_FLASH_ATTENTION
 // FlashAttention Specific Imports
 #include <ATen/native/transformers/cuda/flash_attn/flash_api.h>
+#include <namespace_config.h>
 #endif
 #ifdef USE_MEM_EFF_ATTENTION
 #ifndef USE_ROCM
@@ -916,6 +917,7 @@ _flash_attention_forward(
   std::optional<Tensor> seqused_k = _seqused_k;
   std::optional<at::Tensor> block_table = std::nullopt;  // we are not using the block table yet
   std::optional<Tensor> alibi_slopes = _alibi_slopes;
+  const float softcap = 0.0;
 
   const int non_null_window_left = window_size_left.has_value() ? window_size_left.value() : -1;
   const int non_null_window_right = window_size_right.has_value() ? window_size_right.value() : -1;
@@ -939,7 +941,7 @@ _flash_attention_forward(
         philox_seed,
         philox_offset,
         debug_attn_mask) =
-        pytorch_flash::mha_varlen_fwd(
+        FLASH_NAMESPACE::mha_varlen_fwd(
             query,
             key,
             value,
@@ -957,6 +959,7 @@ _flash_attention_forward(
             is_causal,
             non_null_window_left,
             non_null_window_right,
+            softcap,
             return_debug_mask,
             std::nullopt /*gen_*/);
   } else {
@@ -969,7 +972,7 @@ _flash_attention_forward(
         philox_seed,
         philox_offset,
         debug_attn_mask) =
-        pytorch_flash::mha_fwd(
+        FLASH_NAMESPACE::mha_fwd(
             query,
             key,
             value,
@@ -980,6 +983,7 @@ _flash_attention_forward(
             is_causal,
             non_null_window_left,
             non_null_window_right,
+            softcap,
             return_debug_mask, /*return_softmax (this is used for testing)*/
             std::nullopt);
   }

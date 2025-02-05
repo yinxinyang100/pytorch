@@ -52,7 +52,7 @@ from fx.test_source_matcher_utils import TestSourceMatcher  # noqa: F401
 
 from fx.test_gradual_type import AnnotationsTest  # noqa: F401
 from fx.test_gradual_type import TypeCheckerTest  # noqa: F401
-from typing import Any, Callable, NamedTuple, Optional, Union, Tuple, List
+from typing import Any, Callable, NamedTuple, Optional, Union
 from torch.testing._internal.common_utils import (
     IS_FBCODE,
     IS_MACOS,
@@ -2149,7 +2149,16 @@ class TestFX(JitTestCase):
         graph : torch.fx.Graph = torch.fx.Graph()
         x : torch.fx.Node = graph.create_node('placeholder', 'x')
         b : torch.fx.Node = graph.create_node('call_function', target=torch.relu, args=(x,),
-                                              type_expr=List[float])
+                                              type_expr=list[float])
+        output : torch.fx.Node = graph.output(b)
+
+        self.assertTrue('list[float]' in str(graph))
+
+    def test_typename_print_pre_pep585(self):
+        graph : torch.fx.Graph = torch.fx.Graph()
+        x : torch.fx.Node = graph.create_node('placeholder', 'x')
+        b : torch.fx.Node = graph.create_node('call_function', target=torch.relu, args=(x,),
+                                              type_expr=typing.List[float])  # noqa: UP006
         output : torch.fx.Node = graph.output(b)
 
         self.assertTrue('typing.List[float]' in str(graph))
@@ -2765,6 +2774,19 @@ class TestFX(JitTestCase):
                 return x
 
             def forward(self, x: list[str]) -> list[str]:
+                return self.other(x)
+
+        traced = symbolic_trace(ReturnTypeModule())
+        self.assertIn("-> list[str]", traced._code)
+        scripted = torch.jit.script(traced)
+        self.assertIn("-> List[str]", scripted.code)
+
+    def test_return_type_exists_pre_pep585(self):
+        class ReturnTypeModule(torch.nn.Module):
+            def other(self, x: typing.List[str]) -> typing.List[str]:  # noqa: UP006
+                return x
+
+            def forward(self, x: typing.List[str]) -> typing.List[str]:  # noqa: UP006
                 return self.other(x)
 
         traced = symbolic_trace(ReturnTypeModule())
@@ -3555,7 +3577,7 @@ class TestFX(JitTestCase):
     @unittest.skipIf(sys.version_info > (3, 11), "Does not work in 3.11")
     def test_annotations_empty_tuple(self):
         class Foo(torch.nn.Module):
-            def forward(self, x: Tuple[()], y: Tuple[str, Tuple[()]]):
+            def forward(self, x: typing.Tuple[()], y: typing.Tuple[str, typing.Tuple[()]]):  # noqa: UP006
                 return "foo"
 
         traced = torch.fx.symbolic_trace(Foo())
@@ -4095,10 +4117,10 @@ class TestFXAPIBackwardCompatibility(JitTestCase):
         tuple,
         type,
         typing.Callable,
-        typing.Dict,
-        typing.List,
-        typing.Tuple,
-        typing.Type,
+        typing.Dict,  # noqa: UP006
+        typing.List,  # noqa: UP006
+        typing.Tuple,  # noqa: UP006
+        typing.Type,  # noqa: UP006
         typing.Union,
     }
 
